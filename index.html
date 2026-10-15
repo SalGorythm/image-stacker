@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Image Stacker</title>
+<meta name="description" content="Stack images vertically in any order and download one combined image. Runs fully in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+/* Layout: controls column on the left, live preview on the right; stacks to one column on phones */
+:root{
+  --bg:#f3f4f2; --panel:#ffffff; --fg:#1d2420; --muted:#5d6862; --line:#d9ddd9;
+  --accent:#2f6b4f; --accent-fg:#ffffff; --accent-soft:#e3eee8; --danger:#a63d32;
+  --checker:#e7e9e6;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141816; --panel:#1c211e; --fg:#e4e8e5; --muted:#9aa49e; --line:#2f3632;
+  --accent:#6fbf96; --accent-fg:#0f1a14; --accent-soft:#22352b; --danger:#e27b6f; --checker:#232925;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141816; --panel:#1c211e; --fg:#e4e8e5; --muted:#9aa49e; --line:#2f3632;
+  --accent:#6fbf96; --accent-fg:#0f1a14; --accent-soft:#22352b; --danger:#e27b6f; --checker:#232925;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;margin-bottom:16px}
+h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:18px 12px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;transition:border-color .15s,background .15s}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop small{color:var(--muted)}
+button,select,input[type=number],input[type=text]{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.icon:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:22px 26px 56px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel);cursor:grab}
+.item.dragging{opacity:.4}
+.item.target{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.handle{color:var(--muted);font-size:16px;line-height:1;text-align:center;user-select:none}
+.num{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.item img{width:56px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--line);background:var(--checker)}
+.meta{min-width:0}
+.name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dims{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.acts{display:flex;gap:2px}
+.icon{border:0;background:none;cursor:pointer;color:var(--muted);width:26px;height:26px;border-radius:5px;font-size:14px}
+.icon:hover{background:var(--accent-soft);color:var(--fg)}
+.icon.del:hover{color:var(--danger)}
+.icon:disabled{opacity:.3;cursor:default;background:none}
+.empty{color:var(--muted);font-size:13px;padding:6px 0}
+.settings{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center}
+.settings label{color:var(--muted);font-size:13px}
+select,input[type=number],input[type=text]{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 8px;min-width:0;width:100%}
+input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:2px}
+.inline{display:flex;gap:8px;align-items:center}
+.preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.stage{background:var(--checker);border-radius:8px;padding:12px;max-height:72vh;overflow:auto;display:flex;justify-content:center}
+.stage canvas{max-width:100%;height:auto;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+.stat{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.toast{min-height:18px;font-size:13px;color:var(--accent)}
+.toast.err{color:var(--danger)}
+.sample{font-size:12px;color:var(--muted);background:var(--accent-soft);border-radius:6px;padding:6px 10px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Image Stacker</h1>
+    <p>Add, order, stack, save. Images stay in your browser.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="Images and settings">
+      <div class="drop" id="drop">
+        <strong>Drop images here</strong>
+        <small>or paste a screenshot (Ctrl/Cmd + V)</small>
+        <div class="row" style="justify-content:center;margin-top:4px">
+          <button class="btn primary" id="pick">Choose images</button>
+          <input type="file" id="file" accept="image/*" multiple hidden>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:space-between">
+        <span class="label" id="count">Order</span>
+        <div class="row">
+          <select id="sort" aria-label="Sort images">
+            <option value="">Sort…</option>
+            <option value="az">Filename A → Z</option>
+            <option value="za">Filename Z → A</option>
+            <option value="added">Order added</option>
+          </select>
+          <button class="btn" id="clear">Clear all</button>
+        </div>
+      </div>
+      <div class="sample" id="sampleNote">These two are examples. They disappear when you add your own images.</div>
+      <ul class="list" id="list"></ul>
+      <p class="empty" id="empty" hidden>No images yet.</p>
+
+      <span class="label">Layout</span>
+      <div class="settings">
+        <label for="gap">Gap</label>
+        <div class="inline"><input type="number" id="gap" min="0" max="400" value="18"><span class="stat">px</span><input type="color" id="gapColor" value="#ffffff" aria-label="Gap colour"></div>
+        <label for="width">Width</label>
+        <select id="width">
+          <option value="widest">Scale all to widest</option>
+          <option value="narrowest">Scale all to narrowest</option>
+          <option value="original">Keep original, centre</option>
+        </select>
+        <label for="fmt">Format</label>
+        <select id="fmt">
+          <option value="png">PNG (exact)</option>
+          <option value="jpg">JPG (smaller)</option>
+        </select>
+        <label for="fname">File name</label>
+        <input type="text" id="fname" value="stacked">
+      </div>
+    </section>
+
+    <section class="panel preview" aria-label="Preview">
+      <div class="row" style="justify-content:space-between">
+        <span class="label">Preview</span>
+        <span class="stat" id="size"></span>
+      </div>
+      <div class="stage"><canvas id="cv" width="10" height="10"></canvas></div>
+      <div class="row">
+        <button class="btn primary" id="save">Download</button>
+        <button class="btn" id="copy">Copy image</button>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let items=[]; let seq=0; let pasteN=0; let isSample=true;
+const cv=$('cv'), ctx=cv.getContext('2d');
+
+function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='toast'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.textContent='',4000)}
+
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+
+async function addFiles(files){
+  const imgs=[...files].filter(f=>f.type.startsWith('image/'));
+  if(!imgs.length){toast('Those files are not images.',true);return}
+  if(isSample){items=[];isSample=false}
+  for(const f of imgs){
+    try{
+      const url=URL.createObjectURL(f);
+      const img=await loadImg(url);
+      let name=f.name;
+      if(!name||name==='image.png'){pasteN++;name='Pasted '+pasteN+'.png'}
+      items.push({id:++seq,name,img,url});
+    }catch(e){toast('Could not read '+f.name,true)}
+  }
+  render();
+}
+
+function makeSample(n,color){
+  const c=document.createElement('canvas');c.width=1232;c.height=693;const x=c.getContext('2d');
+  x.fillStyle='#e9d3a8';x.fillRect(0,0,1232,693);
+  x.fillStyle='#fafafa';x.fillRect(50,50,1132,590);
+  x.strokeStyle='#7a9a3a';x.lineWidth=2;x.strokeRect(62,62,1108,566);
+  x.fillStyle=color;x.font='bold 30px sans-serif';x.textAlign='center';x.fillText('EXAMPLE SLIDE',616,140);
+  x.fillStyle='#222';x.font='bold 64px Georgia,serif';x.fillText('Question '+n,616,330);
+  x.fillStyle='#666';x.font='28px sans-serif';x.fillText('Replace with your own images',616,400);
+  return c;
+}
+function initSample(){
+  items=[{id:++seq,name:'example-1.png',img:makeSample(1,'#b22222')},{id:++seq,name:'example-2.png',img:makeSample(2,'#b22222')}];
+  items.forEach(it=>it.url=it.img.toDataURL('image/png'));
+}
+
+function dims(it){return (it.img.naturalWidth||it.img.width)+'×'+(it.img.naturalHeight||it.img.height)}
+function W(it){return it.img.naturalWidth||it.img.width} function H(it){return it.img.naturalHeight||it.img.height}
+
+function render(){
+  const ul=$('list');ul.innerHTML='';
+  $('empty').hidden=items.length>0;
+  $('sampleNote').hidden=!isSample;
+  $('count').textContent=items.length?`Order · ${items.length} image${items.length>1?'s':''}`:'Order';
+  items.forEach((it,i)=>{
+    const li=document.createElement('li');li.className='item';li.draggable=true;li.dataset.id=it.id;
+    li.innerHTML=`<span class="handle" aria-hidden="true">⋮⋮</span><span class="num">${i+1}</span><img alt=""><div class="meta"><div class="name"></div><div class="dims">${dims(it)}</div></div>
+      <div class="acts"><button class="icon up" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="icon down" aria-label="Move down" ${i===items.length-1?'disabled':''}>↓</button><button class="icon del" aria-label="Remove">✕</button></div>`;
+    li.querySelector('img').src=it.url;
+    li.querySelector('.name').textContent=it.name;li.querySelector('.name').title=it.name;
+    li.querySelector('.up').onclick=()=>move(i,i-1);
+    li.querySelector('.down').onclick=()=>move(i,i+1);
+    li.querySelector('.del').onclick=()=>{items.splice(i,1);render()};
+    li.addEventListener('dragstart',e=>{dragId=it.id;li.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x')});
+    li.addEventListener('dragend',()=>{dragId=null;li.classList.remove('dragging');document.querySelectorAll('.target').forEach(n=>n.classList.remove('target'))});
+    li.addEventListener('dragover',e=>{if(dragId==null)return;e.preventDefault();li.classList.add('target')});
+    li.addEventListener('dragleave',()=>li.classList.remove('target'));
+    li.addEventListener('drop',e=>{if(dragId==null)return;e.preventDefault();e.stopPropagation();
+      const from=items.findIndex(x=>x.id===dragId), to=items.findIndex(x=>x.id===it.id);move(from,to)});
+    ul.appendChild(li);
+  });
+  draw();
+}
+let dragId=null;
+function move(from,to){if(to<0||to>=items.length||from===to)return;const [x]=items.splice(from,1);items.splice(to,0,x);render()}
+
+function layout(){
+  const gap=Math.max(0,+$('gap').value||0), mode=$('width').value;
+  if(!items.length)return null;
+  const ws=items.map(W);
+  const target=mode==='narrowest'?Math.min(...ws):Math.max(...ws);
+  const parts=items.map(it=>{
+    if(mode==='original')return {it,w:W(it),h:H(it)};
+    return {it,w:target,h:Math.round(H(it)*target/W(it))};
+  });
+  const width=mode==='original'?Math.max(...ws):target;
+  const height=parts.reduce((s,p)=>s+p.h,0)+gap*(parts.length-1);
+  return {parts,width,height,gap};
+}
+
+function draw(){
+  const L=layout();
+  const has=!!L;
+  $('save').disabled=!has;$('copy').disabled=!has;
+  if(!L){cv.width=10;cv.height=10;ctx.clearRect(0,0,10,10);$('size').textContent='';return}
+  cv.width=L.width;cv.height=L.height;
+  ctx.fillStyle=$('gapColor').value;ctx.fillRect(0,0,L.width,L.height);
+  ctx.imageSmoothingQuality='high';
+  let y=0;
+  for(const p of L.parts){ctx.drawImage(p.it.img,Math.round((L.width-p.w)/2),y,p.w,p.h);y+=p.h+L.gap}
+  $('size').textContent=`${L.width} × ${L.height} px`;
+}
+
+function exportBlob(){
+  const jpg=$('fmt').value==='jpg';
+  return new Promise(res=>cv.toBlob(res,jpg?'image/jpeg':'image/png',0.92));
+}
+function filename(){
+  let n=($('fname').value||'stacked').trim().replace(/\.(png|jpe?g)$/i,'')||'stacked';
+  return n+($('fmt').value==='jpg'?'.jpg':'.png');
+}
+
+$('save').onclick=async()=>{
+  if(isSample){toast('Add your own images first. These are examples.',true);return}
+  const blob=await exportBlob();
+  if(!blob){toast('The image is too large for this browser to export. Try fewer images or JPG.',true);return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename();
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  toast('Saved '+filename());
+};
+
+$('copy').onclick=async()=>{
+  if(isSample){toast('Add your own images first. These are examples.',true);return}
+  try{
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+    toast('Copied. Paste it into WhatsApp or anywhere else.');
+  }catch(e){toast('This browser blocked copying images. Use Download instead.',true)}
+};
+
+$('pick').onclick=()=>$('file').click();
+$('file').onchange=e=>{addFiles(e.target.files);e.target.value=''};
+const drop=$('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{if(dragId!=null)return;e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,()=>drop.classList.remove('over')));
+drop.addEventListener('drop',e=>{if(dragId!=null)return;e.preventDefault();if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files)});
+// Allow dropping files anywhere on the page
+document.addEventListener('dragover',e=>{if(dragId==null&&e.dataTransfer.types.includes('Files'))e.preventDefault()});
+document.addEventListener('drop',e=>{if(dragId==null&&e.dataTransfer.files.length){e.preventDefault();addFiles(e.dataTransfer.files)}});
+document.addEventListener('paste',e=>{
+  const files=[...(e.clipboardData?.items||[])].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile()).filter(Boolean);
+  if(files.length){e.preventDefault();addFiles(files)}
+});
+
+$('sort').onchange=e=>{
+  const v=e.target.value;const cmp=(a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
+  if(v==='az')items.sort(cmp);else if(v==='za')items.sort((a,b)=>cmp(b,a));else if(v==='added')items.sort((a,b)=>a.id-b.id);
+  e.target.value='';render();
+};
+$('clear').onclick=()=>{items.forEach(it=>{if(it.url&&it.url.startsWith('blob:'))URL.revokeObjectURL(it.url)});items=[];isSample=false;render()};
+['gap','gapColor','width'].forEach(id=>$(id).addEventListener('input',draw));
+
+try{const s=JSON.parse(localStorage.getItem('stacker-settings')||'{}');
+  ['gap','gapColor','width','fmt'].forEach(k=>{if(s[k]!=null)$(k).value=s[k]})}catch(e){}
+['gap','gapColor','width','fmt'].forEach(k=>$(k).addEventListener('change',()=>{
+  try{localStorage.setItem('stacker-settings',JSON.stringify({gap:$('gap').value,gapColor:$('gapColor').value,width:$('width').value,fmt:$('fmt').value}))}catch(e){}
+}));
+
+initSample();render();
+</script>
+
+</body>
+</html>

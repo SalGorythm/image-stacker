@@ -36,15 +36,19 @@ header p{margin:0;color:var(--muted)}
 @media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.drop{border:1.5px dashed var(--line);border-radius:8px;padding:18px 12px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;transition:border-color .15s,background .15s}
-.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:20px 12px;text-align:center;display:flex;flex-direction:column;gap:4px;align-items:center;transition:border-color .15s,background .15s}
+.drop.over,.drop.flash{border-color:var(--accent);background:var(--accent-soft)}
 .drop small{color:var(--muted)}
+.drop .row{justify-content:center;margin-top:8px}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--panel);color:var(--fg)}
+@media (hover:none){.kbd-hint{display:none}}
 button,select,input[type=number],input[type=text]{font:inherit;color:inherit}
 .btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:13px}
 .btn:focus-visible,.icon:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -62,15 +66,21 @@ button,select,input[type=number],input[type=text]{font:inherit;color:inherit}
 .icon:hover{background:var(--accent-soft);color:var(--fg)}
 .icon.del:hover{color:var(--danger)}
 .icon:disabled{opacity:.3;cursor:default;background:none}
-.empty{color:var(--muted);font-size:13px;padding:6px 0}
-.settings{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 12px;align-items:center}
+.section{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.settings{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px 12px;align-items:center}
 .settings label{color:var(--muted);font-size:13px}
 select,input[type=number],input[type=text]{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 8px;min-width:0;width:100%}
+.row select{width:auto}
+#sort{padding:3px 6px;font-size:13px}
 input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:2px}
 .inline{display:flex;gap:8px;align-items:center}
 .preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
 .stage{background:var(--checker);border-radius:8px;padding:12px;max-height:72vh;overflow:auto;display:flex;justify-content:center}
 .stage canvas{max-width:100%;height:auto;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+.placeholder{color:var(--muted);text-align:center;padding:64px 16px}
+.export{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.export #fname{flex:1 1 140px;width:auto}
+.export #fmt{flex:0 0 auto}
 .stat{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .toast{min-height:18px;font-size:13px;color:var(--accent)}
 .toast.err{color:var(--danger)}
@@ -90,46 +100,43 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
     <section class="panel" aria-label="Images and settings">
       <div class="drop" id="drop">
         <strong>Drop images here</strong>
-        <small>or paste a screenshot (Ctrl/Cmd + V)</small>
-        <div class="row" style="justify-content:center;margin-top:4px">
+        <small class="kbd-hint">or press <kbd id="pasteKey">Ctrl+V</kbd> anywhere to paste from the clipboard</small>
+        <div class="row">
           <button class="btn primary" id="pick">Choose images</button>
+          <button class="btn" id="pasteBtn">Paste</button>
           <input type="file" id="file" accept="image/*" multiple hidden>
         </div>
       </div>
 
-      <div class="row" style="justify-content:space-between">
-        <span class="label" id="count">Order</span>
-        <div class="row">
-          <select id="sort" aria-label="Sort images">
-            <option value="">Sort…</option>
-            <option value="az">Filename A → Z</option>
-            <option value="za">Filename Z → A</option>
-            <option value="added">Order added</option>
-          </select>
-          <button class="btn" id="clear">Clear all</button>
+      <div class="section" id="orderBox">
+        <div class="row" style="justify-content:space-between">
+          <span class="label" id="count">Order</span>
+          <div class="row">
+            <select id="sort" aria-label="Sort images">
+              <option value="">Sort…</option>
+              <option value="az">Filename A → Z</option>
+              <option value="za">Filename Z → A</option>
+              <option value="added">Order added</option>
+            </select>
+            <button class="btn sm" id="clear">Clear</button>
+          </div>
         </div>
+        <div class="sample" id="sampleNote">These two are examples. They disappear when you add your own images.</div>
+        <ul class="list" id="list"></ul>
       </div>
-      <div class="sample" id="sampleNote">These two are examples. They disappear when you add your own images.</div>
-      <ul class="list" id="list"></ul>
-      <p class="empty" id="empty" hidden>No images yet.</p>
 
-      <span class="label">Layout</span>
-      <div class="settings">
-        <label for="gap">Gap</label>
-        <div class="inline"><input type="number" id="gap" min="0" max="400" value="18"><span class="stat">px</span><input type="color" id="gapColor" value="#ffffff" aria-label="Gap colour"></div>
-        <label for="width">Width</label>
-        <select id="width">
-          <option value="widest">Scale all to widest</option>
-          <option value="narrowest">Scale all to narrowest</option>
-          <option value="original">Keep original, centre</option>
-        </select>
-        <label for="fmt">Format</label>
-        <select id="fmt">
-          <option value="png">PNG (exact)</option>
-          <option value="jpg">JPG (smaller)</option>
-        </select>
-        <label for="fname">File name</label>
-        <input type="text" id="fname" value="stacked">
+      <div class="section">
+        <span class="label">Layout</span>
+        <div class="settings">
+          <label for="gap">Gap</label>
+          <div class="inline"><input type="number" id="gap" min="0" max="400" value="18"><span class="stat">px</span><input type="color" id="gapColor" value="#ffffff" aria-label="Gap colour" title="Gap colour"></div>
+          <label for="width">Width</label>
+          <select id="width">
+            <option value="widest">Scale all to widest</option>
+            <option value="narrowest">Scale all to narrowest</option>
+            <option value="original">Keep original, centre</option>
+          </select>
+        </div>
       </div>
     </section>
 
@@ -138,10 +145,15 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
         <span class="label">Preview</span>
         <span class="stat" id="size"></span>
       </div>
-      <div class="stage"><canvas id="cv" width="10" height="10"></canvas></div>
-      <div class="row">
+      <div class="stage"><canvas id="cv" width="10" height="10"></canvas><p class="placeholder" id="ph" hidden>Add images and the stacked result shows up here.</p></div>
+      <div class="export">
+        <select id="fmt" aria-label="Format">
+          <option value="png">PNG (exact)</option>
+          <option value="jpg">JPG (smaller)</option>
+        </select>
+        <input type="text" id="fname" value="stacked" aria-label="File name">
         <button class="btn primary" id="save">Download</button>
-        <button class="btn" id="copy">Copy image</button>
+        <button class="btn" id="copy">Copy</button>
       </div>
       <div class="toast" id="toast" role="status"></div>
     </section>
@@ -161,16 +173,39 @@ async function addFiles(files){
   const imgs=[...files].filter(f=>f.type.startsWith('image/'));
   if(!imgs.length){toast('Those files are not images.',true);return}
   if(isSample){items=[];isSample=false}
+  let added=0;
   for(const f of imgs){
     try{
       const url=URL.createObjectURL(f);
       const img=await loadImg(url);
       let name=f.name;
-      if(!name||name==='image.png'){pasteN++;name='Pasted '+pasteN+'.png'}
-      items.push({id:++seq,name,img,url});
-    }catch(e){toast('Could not read '+f.name,true)}
+      if(!name||/^image\.\w+$/.test(name)){pasteN++;name='Pasted '+pasteN+'.'+((f.type.split('/')[1]||'png').replace('jpeg','jpg'))}
+      items.push({id:++seq,name,img,url});added++;
+    }catch(e){toast('Could not read '+(f.name||'that image'),true)}
   }
   render();
+  if(added){
+    toast(`Added ${added} image${added>1?'s':''}.`);
+    const d=$('drop');d.classList.add('flash');setTimeout(()=>d.classList.remove('flash'),400);
+  }
+}
+
+const isMac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent);
+const pasteKey=isMac?'⌘V':'Ctrl+V';
+$('pasteKey').textContent=pasteKey;
+const NO_IMAGE='No image on the clipboard. Copy an image or take a screenshot first.';
+
+async function pasteFromClipboard(){
+  if(!navigator.clipboard?.read){toast(`This browser can't read the clipboard from a button. Press ${pasteKey} instead.`,true);return}
+  try{
+    const files=[];
+    for(const ci of await navigator.clipboard.read()){
+      const t=ci.types.find(t=>t.startsWith('image/'));
+      if(t){const b=await ci.getType(t);files.push(new File([b],'',{type:t}))}
+    }
+    if(!files.length){toast(NO_IMAGE,true);return}
+    addFiles(files);
+  }catch(e){toast(`Clipboard access was blocked. Press ${pasteKey} instead.`,true)}
 }
 
 function makeSample(n,color){
@@ -193,7 +228,7 @@ function W(it){return it.img.naturalWidth||it.img.width} function H(it){return i
 
 function render(){
   const ul=$('list');ul.innerHTML='';
-  $('empty').hidden=items.length>0;
+  $('orderBox').hidden=!items.length;
   $('sampleNote').hidden=!isSample;
   $('count').textContent=items.length?`Order · ${items.length} image${items.length>1?'s':''}`:'Order';
   items.forEach((it,i)=>{
@@ -236,6 +271,7 @@ function draw(){
   const L=layout();
   const has=!!L;
   $('save').disabled=!has;$('copy').disabled=!has;
+  cv.hidden=!has;$('ph').hidden=has;
   if(!L){cv.width=10;cv.height=10;ctx.clearRect(0,0,10,10);$('size').textContent='';return}
   cv.width=L.width;cv.height=L.height;
   ctx.fillStyle=$('gapColor').value;ctx.fillRect(0,0,L.width,L.height);
@@ -273,6 +309,7 @@ $('copy').onclick=async()=>{
 };
 
 $('pick').onclick=()=>$('file').click();
+$('pasteBtn').onclick=pasteFromClipboard;
 $('file').onchange=e=>{addFiles(e.target.files);e.target.value=''};
 const drop=$('drop');
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{if(dragId!=null)return;e.preventDefault();drop.classList.add('over')}));
@@ -281,9 +318,13 @@ drop.addEventListener('drop',e=>{if(dragId!=null)return;e.preventDefault();if(e.
 // Allow dropping files anywhere on the page
 document.addEventListener('dragover',e=>{if(dragId==null&&e.dataTransfer.types.includes('Files'))e.preventDefault()});
 document.addEventListener('drop',e=>{if(dragId==null&&e.dataTransfer.files.length){e.preventDefault();addFiles(e.dataTransfer.files)}});
+// Paste works anywhere on the page: screenshots, "Copy image" from a browser, or files copied in Finder/Explorer
 document.addEventListener('paste',e=>{
-  const files=[...(e.clipboardData?.items||[])].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile()).filter(Boolean);
+  const dt=e.clipboardData;if(!dt)return;
+  let files=[...dt.files].filter(f=>f.type.startsWith('image/'));
+  if(!files.length)files=[...dt.items].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile()).filter(Boolean);
   if(files.length){e.preventDefault();addFiles(files)}
+  else if(!e.target.closest?.('input,textarea'))toast(NO_IMAGE,true);
 });
 
 $('sort').onchange=e=>{

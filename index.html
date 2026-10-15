@@ -158,6 +158,11 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
           <label id="gsizeL">Per image</label>
           <div class="sizes" id="gsizes"></div>
           <input type="hidden" id="gsize" value="4">
+          <label for="gtail" id="gtailL">After that</label>
+          <select id="gtail">
+            <option value="rest">Put the rest in one image</option>
+            <option value="repeat">Repeat the last size</option>
+          </select>
           <label for="granges" id="grangesL">Ranges</label>
           <input type="text" id="granges" placeholder="1-4, 5-8, 9-12">
         </div>
@@ -345,10 +350,14 @@ function computeGroups(){
   const mode=$('gmode').value, n=items.length;
   let info='', ranges=[];
   if(mode==='every'&&n){
-    // Sizes are used in turn; the last one repeats for whatever is left
-    const sizes=readSizes();
-    for(let a=1,i=0;a<=n;i++){const k=sizes[Math.min(i,sizes.length-1)];ranges.push([a,Math.min(n,a+k-1)]);a+=k}
-    if(sizes.length>1&&ranges.length>1)info=`${n} images → ${ranges.length} stacked images (${sizes.join(', ')}, then ${sizes.at(-1)} each).`;
+    // Sizes are used in turn. One size repeats ("every N"); with several, the rest either
+    // goes into one final image or keeps repeating the last size.
+    const sizes=readSizes(), rest=sizes.length>1&&$('gtail').value==='rest';
+    for(let a=1,i=0;a<=n;i++){
+      const k=i>=sizes.length&&rest?n:sizes[Math.min(i,sizes.length-1)];
+      ranges.push([a,Math.min(n,a+k-1)]);a+=k;
+    }
+    if(sizes.length>1&&ranges.length>1)info=`${n} images → ${ranges.length} stacked images (${sizes.join(', ')}, then ${rest?'the rest':sizes.at(-1)+' each'}).`;
   }else if(mode==='ranges'&&n){
     const {out,bad}=parseRanges($('granges').value,n);
     ranges=out;
@@ -529,17 +538,19 @@ $('clear').onclick=()=>{
 function syncGroupFields(){
   const m=$('gmode').value;
   $('gsizes').hidden=$('gsizeL').hidden=m!=='every';
+  $('gtail').hidden=$('gtailL').hidden=m!=='every'||readSizes().length<2;
   $('granges').hidden=$('grangesL').hidden=m!=='ranges';
 }
 $('gmode').addEventListener('change',()=>{syncGroupFields();cur=0;render()});
 $('granges').addEventListener('input',()=>render());
+$('gtail').addEventListener('change',()=>{cur=0;render()});
 
 // "Every N" sizes: a row of number boxes (4, then 3, then 5…) mirrored into the hidden #gsize field
 function readSizes(){const v=$('gsize').value.split(',').map(x=>Math.floor(+x)||0).filter(x=>x>0);return v.length?v:[4]}
 function syncSizes(){
   $('gsize').value=[...$('gsizes').querySelectorAll('input')].map(i=>i.value).join(',');
   $('gsize').dispatchEvent(new Event('change'));
-  render();
+  syncGroupFields();render();
 }
 function buildSizes(focusLast){
   const box=$('gsizes');box.innerHTML='';
@@ -557,7 +568,7 @@ function buildSizes(focusLast){
   if(focusLast){const all=box.querySelectorAll('input');all[all.length-1].select()}
 }
 
-const SETTINGS=['gap','gapColor','width','fmt','gmode','gsize','granges'];
+const SETTINGS=['gap','gapColor','width','fmt','gmode','gsize','gtail','granges'];
 try{const s=JSON.parse(localStorage.getItem('stacker-settings')||'{}');
   SETTINGS.forEach(k=>{if(s[k]!=null)$(k).value=s[k]})}catch(e){}
 SETTINGS.forEach(k=>$(k).addEventListener('change',()=>{

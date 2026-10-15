@@ -88,6 +88,9 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
 .gtag{font-family:var(--mono);font-size:11px;color:var(--accent);margin-left:6px}
 .gnav{display:flex;align-items:center;gap:4px}
 .hint{font-size:12px;color:var(--muted)}
+.sizes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sizes input[type=number]{width:60px}
+.sz{display:inline-flex;align-items:center;gap:4px}
 .sample{font-size:12px;color:var(--muted);background:var(--accent-soft);border-radius:6px;padding:6px 10px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -152,8 +155,9 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
             <option value="every">Every N images</option>
             <option value="ranges">Custom ranges</option>
           </select>
-          <label for="gsize" id="gsizeL">Per image</label>
-          <input type="number" id="gsize" min="1" max="999" value="4">
+          <label id="gsizeL">Per image</label>
+          <div class="sizes" id="gsizes"></div>
+          <input type="hidden" id="gsize" value="4">
           <label for="granges" id="grangesL">Ranges</label>
           <input type="text" id="granges" placeholder="1-4, 5-8, 9-12">
         </div>
@@ -341,8 +345,10 @@ function computeGroups(){
   const mode=$('gmode').value, n=items.length;
   let info='', ranges=[];
   if(mode==='every'&&n){
-    const k=Math.max(1,Math.floor(+$('gsize').value)||1);
-    for(let a=1;a<=n;a+=k)ranges.push([a,Math.min(n,a+k-1)]);
+    // Sizes are used in turn; the last one repeats for whatever is left
+    const sizes=readSizes();
+    for(let a=1,i=0;a<=n;i++){const k=sizes[Math.min(i,sizes.length-1)];ranges.push([a,Math.min(n,a+k-1)]);a+=k}
+    if(sizes.length>1&&ranges.length>1)info=`${n} images → ${ranges.length} stacked images (${sizes.join(', ')}, then ${sizes.at(-1)} each).`;
   }else if(mode==='ranges'&&n){
     const {out,bad}=parseRanges($('granges').value,n);
     ranges=out;
@@ -522,11 +528,34 @@ $('clear').onclick=()=>{
 
 function syncGroupFields(){
   const m=$('gmode').value;
-  $('gsize').hidden=$('gsizeL').hidden=m!=='every';
+  $('gsizes').hidden=$('gsizeL').hidden=m!=='every';
   $('granges').hidden=$('grangesL').hidden=m!=='ranges';
 }
 $('gmode').addEventListener('change',()=>{syncGroupFields();cur=0;render()});
-['gsize','granges'].forEach(id=>$(id).addEventListener('input',()=>render()));
+$('granges').addEventListener('input',()=>render());
+
+// "Every N" sizes: a row of number boxes (4, then 3, then 5…) mirrored into the hidden #gsize field
+function readSizes(){const v=$('gsize').value.split(',').map(x=>Math.floor(+x)||0).filter(x=>x>0);return v.length?v:[4]}
+function syncSizes(){
+  $('gsize').value=[...$('gsizes').querySelectorAll('input')].map(i=>i.value).join(',');
+  $('gsize').dispatchEvent(new Event('change'));
+  render();
+}
+function buildSizes(focusLast){
+  const box=$('gsizes');box.innerHTML='';
+  readSizes().forEach((k,i)=>{
+    const s=document.createElement('span');s.className='sz';
+    s.innerHTML=(i?'<span class="hint">then</span>':'')+`<input type="number" min="1" max="999" aria-label="Group ${i+1} size">`+(i?'<button class="icon" aria-label="Remove this size">✕</button>':'');
+    const inp=s.querySelector('input');inp.value=k;inp.addEventListener('input',syncSizes);
+    if(i)s.querySelector('button').onclick=()=>{s.remove();syncSizes();buildSizes()};
+    box.appendChild(s);
+  });
+  const add=document.createElement('button');add.className='btn sm';add.textContent='+ Next';
+  add.title='Add another group size. The last size repeats for the remaining images.';
+  add.onclick=()=>{const s=readSizes();$('gsize').value=[...s,s.at(-1)].join(',');buildSizes(true);syncSizes()};
+  box.appendChild(add);
+  if(focusLast){const all=box.querySelectorAll('input');all[all.length-1].select()}
+}
 
 const SETTINGS=['gap','gapColor','width','fmt','gmode','gsize','granges'];
 try{const s=JSON.parse(localStorage.getItem('stacker-settings')||'{}');
@@ -534,7 +563,7 @@ try{const s=JSON.parse(localStorage.getItem('stacker-settings')||'{}');
 SETTINGS.forEach(k=>$(k).addEventListener('change',()=>{
   try{localStorage.setItem('stacker-settings',JSON.stringify(Object.fromEntries(SETTINGS.map(k=>[k,$(k).value]))))}catch(e){}
 }));
-syncGroupFields();
+syncGroupFields();buildSizes();
 
 restore();
 </script>

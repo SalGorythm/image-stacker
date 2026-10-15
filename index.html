@@ -84,6 +84,10 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
 .stat{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .toast{min-height:18px;font-size:13px;color:var(--accent)}
 .toast.err{color:var(--danger)}
+.item.cur{background:var(--accent-soft)}
+.gtag{font-family:var(--mono);font-size:11px;color:var(--accent);margin-left:6px}
+.gnav{display:flex;align-items:center;gap:4px}
+.hint{font-size:12px;color:var(--muted)}
 .sample{font-size:12px;color:var(--muted);background:var(--accent-soft);border-radius:6px;padding:6px 10px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -99,12 +103,12 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
   <div class="grid">
     <section class="panel" aria-label="Images and settings">
       <div class="drop" id="drop">
-        <strong>Drop images here</strong>
+        <strong>Drop images or a PDF here</strong>
         <small class="kbd-hint">or press <kbd id="pasteKey">Ctrl+V</kbd> anywhere to paste from the clipboard</small>
         <div class="row">
-          <button class="btn primary" id="pick">Choose images</button>
+          <button class="btn primary" id="pick">Choose files</button>
           <button class="btn" id="pasteBtn">Paste</button>
-          <input type="file" id="file" accept="image/*" multiple hidden>
+          <input type="file" id="file" accept="image/*,application/pdf,.pdf" multiple hidden>
         </div>
       </div>
 
@@ -138,11 +142,33 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
           </select>
         </div>
       </div>
+
+      <div class="section">
+        <span class="label">Groups</span>
+        <div class="settings">
+          <label for="gmode">Split</label>
+          <select id="gmode">
+            <option value="all">One image with everything</option>
+            <option value="every">Every N images</option>
+            <option value="ranges">Custom ranges</option>
+          </select>
+          <label for="gsize" id="gsizeL">Per image</label>
+          <input type="number" id="gsize" min="1" max="999" value="4">
+          <label for="granges" id="grangesL">Ranges</label>
+          <input type="text" id="granges" placeholder="1-4, 5-8, 9-12">
+        </div>
+        <p class="hint" id="ginfo" hidden></p>
+      </div>
     </section>
 
     <section class="panel preview" aria-label="Preview">
       <div class="row" style="justify-content:space-between">
         <span class="label">Preview</span>
+        <div class="gnav" id="gnav" hidden>
+          <button class="icon" id="gprev" aria-label="Previous group">‹</button>
+          <span class="stat" id="gpos"></span>
+          <button class="icon" id="gnext" aria-label="Next group">›</button>
+        </div>
         <span class="stat" id="size"></span>
       </div>
       <div class="stage"><canvas id="cv" width="10" height="10"></canvas><p class="placeholder" id="ph" hidden>Add images and the stacked result shows up here.</p></div>
@@ -154,6 +180,7 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
         <input type="text" id="fname" value="stacked" aria-label="File name">
         <button class="btn primary" id="save">Download</button>
         <button class="btn" id="copy">Copy</button>
+        <button class="btn primary" id="zip" hidden>Download all (ZIP)</button>
       </div>
       <div class="toast" id="toast" role="status"></div>
     </section>
@@ -162,30 +189,101 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
 
 <script>
 const $=id=>document.getElementById(id);
-let items=[]; let seq=0; let pasteN=0; let isSample=true;
+let items=[]; let seq=0; let pasteN=0; let isSample=true; let cur=0;
 const cv=$('cv'), ctx=cv.getContext('2d');
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+const JSZIP='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
 
-function toast(msg,err){const t=$('toast');t.textContent=msg;t.className='toast'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.textContent='',4000)}
+function toast(msg,err,keep){const t=$('toast');t.textContent=msg;t.className='toast'+(err?' err':'');clearTimeout(toast._t);if(!keep)toast._t=setTimeout(()=>t.textContent='',4000)}
 
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Could not load '+src));document.head.appendChild(s)})}
+function canvasBlob(c,type,q){return new Promise(r=>c.toBlob(r,type,q))}
+function saveBlob(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+
+// Images are kept in IndexedDB so an accidental reload doesn't lose them
+const DB=(()=>{
+  let p;
+  const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('image-stacker',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const get=async k=>{const db=await open();return new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})};
+  const set=async(k,v)=>{const db=await open();return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})};
+  return {get,set};
+})();
+let saveT;
+function persist(){
+  if(isSample)return;
+  clearTimeout(saveT);
+  saveT=setTimeout(()=>DB.set('state',{items:items.map(it=>({id:it.id,name:it.name,blob:it.blob})),seq,pasteN})
+    .catch(()=>toast('Could not save images for next time. Browser storage may be full.',true)),300);
+}
+async function restore(){
+  try{
+    const s=await DB.get('state');
+    if(s&&s.items&&s.items.length){
+      const out=[];
+      for(const r of s.items){try{const url=URL.createObjectURL(r.blob);out.push({id:r.id,name:r.name,blob:r.blob,url,img:await loadImg(url)})}catch(e){}}
+      if(out.length){items=out;seq=s.seq||0;pasteN=s.pasteN||0;isSample=false;render();toast(`Restored ${out.length} image${out.length>1?'s':''} from last time.`);return}
+    }
+  }catch(e){}
+  initSample();render();
+}
+
+// PDF pages become one image each (pdf.js is loaded only when a PDF arrives)
+let pdfjsP;
+function pdfjs(){
+  return pdfjsP||(pdfjsP=loadScript(PDFJS+'pdf.min.js').then(()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';return pdfjsLib}).catch(e=>{pdfjsP=null;throw e}));
+}
+async function pdfToFiles(f){
+  const lib=await pdfjs();
+  const doc=await lib.getDocument({data:await f.arrayBuffer()}).promise;
+  const base=f.name.replace(/\.pdf$/i,''), pad=String(doc.numPages).length, out=[];
+  for(let n=1;n<=doc.numPages;n++){
+    toast(`Reading ${f.name}: page ${n} of ${doc.numPages}…`,false,true);
+    const page=await doc.getPage(n);
+    const scale=Math.min(3,Math.max(1,1600/page.getViewport({scale:1}).width));
+    const vp=page.getViewport({scale});
+    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+    await page.render({canvasContext:x,viewport:vp}).promise;
+    const blob=await canvasBlob(c,'image/png');
+    out.push(new File([blob],`${base} - ${String(n).padStart(pad,'0')}.png`,{type:'image/png'}));
+    page.cleanup();
+  }
+  doc.destroy();
+  return out;
+}
+const isPdf=f=>f.type==='application/pdf'||/\.pdf$/i.test(f.name);
+const isDeck=f=>/\.(pptx?|key|odp)$/i.test(f.name);
 
 async function addFiles(files){
-  const imgs=[...files].filter(f=>f.type.startsWith('image/'));
-  if(!imgs.length){toast('Those files are not images.',true);return}
+  files=[...files];
+  const queue=[];
+  for(const f of files){
+    if(isPdf(f)){try{queue.push(...await pdfToFiles(f))}catch(e){toast('Could not read '+f.name+'. Is it a valid PDF?',true)}}
+    else if(f.type.startsWith('image/'))queue.push(f);
+  }
+  if(!queue.length){
+    if(files.some(isDeck))toast('Export the presentation as PDF first (File → Export → PDF), then drop the PDF here.',true);
+    else if(!files.some(isPdf))toast('Those files are not images or PDFs.',true);
+    return;
+  }
   if(isSample){items=[];isSample=false}
   let added=0;
-  for(const f of imgs){
+  for(const f of queue){
     try{
       const url=URL.createObjectURL(f);
       const img=await loadImg(url);
       let name=f.name;
       if(!name||/^image\.\w+$/.test(name)){pasteN++;name='Pasted '+pasteN+'.'+((f.type.split('/')[1]||'png').replace('jpeg','jpg'))}
-      items.push({id:++seq,name,img,url});added++;
+      items.push({id:++seq,name,img,url,blob:f});added++;
     }catch(e){toast('Could not read '+(f.name||'that image'),true)}
   }
   render();
   if(added){
-    toast(`Added ${added} image${added>1?'s':''}.`);
+    toast(`Added ${added} image${added>1?'s':''}.`+(files.some(isDeck)?' (Presentations need exporting to PDF first.)':''));
     const d=$('drop');d.classList.add('flash');setTimeout(()=>d.classList.remove('flash'),400);
   }
 }
@@ -223,23 +321,68 @@ function initSample(){
   items.forEach(it=>it.url=it.img.toDataURL('image/png'));
 }
 
-function dims(it){return (it.img.naturalWidth||it.img.width)+'×'+(it.img.naturalHeight||it.img.height)}
+function dims(it){return W(it)+'×'+H(it)}
 function W(it){return it.img.naturalWidth||it.img.width} function H(it){return it.img.naturalHeight||it.img.height}
+
+// Groups: positions are 1-based slots in the current order
+function parseRanges(s,n){
+  const out=[],bad=[];
+  for(const tok of s.split(/[,;\n]+/).map(t=>t.trim()).filter(Boolean)){
+    const m=tok.match(/^(\d+)\s*(?:[-–]\s*(\d+))?$/);
+    if(!m){bad.push(tok);continue}
+    let a=+m[1],b=m[2]?+m[2]:a;if(a>b)[a,b]=[b,a];
+    a=Math.max(1,a);b=Math.min(n,b);
+    if(a>b){bad.push(tok);continue}
+    out.push([a,b]);
+  }
+  return {out,bad};
+}
+function computeGroups(){
+  const mode=$('gmode').value, n=items.length;
+  let info='', ranges=[];
+  if(mode==='every'&&n){
+    const k=Math.max(1,Math.floor(+$('gsize').value)||1);
+    for(let a=1;a<=n;a+=k)ranges.push([a,Math.min(n,a+k-1)]);
+  }else if(mode==='ranges'&&n){
+    const {out,bad}=parseRanges($('granges').value,n);
+    ranges=out;
+    const used=new Set();out.forEach(([a,b])=>{for(let i=a;i<=b;i++)used.add(i)});
+    const parts=[];
+    if(!out.length)info='Type ranges like 1-4, 5-8. Until then everything is one image.';
+    if(bad.length)parts.push('Ignored: '+bad.join(', '));
+    if(out.length&&used.size<n)parts.push(`${n-used.size} image${n-used.size>1?'s are':' is'} not in any group`);
+    if(parts.length)info=(info?info+' ':'')+parts.join(' · ')+'.';
+  }
+  if(!ranges.length)ranges=n?[[1,n]]:[];
+  const groups=ranges.map(([a,b])=>({label:a===b?String(a):`${a}-${b}`,list:items.slice(a-1,b)}));
+  if(mode!=='all'&&groups.length>1&&!info)info=`${n} images → ${groups.length} stacked images.`;
+  return {groups,info};
+}
 
 function render(){
   const ul=$('list');ul.innerHTML='';
+  const {groups,info}=computeGroups();
+  cur=Math.min(cur,Math.max(0,groups.length-1));
+  const multi=groups.length>1;
+  const tags=new Map();
+  if(multi)groups.forEach((g,gi)=>g.list.forEach(it=>{if(!tags.has(it.id))tags.set(it.id,[]);tags.get(it.id).push(gi)}));
+  const inCur=new Set((groups[cur]?.list||[]).map(it=>it.id));
   $('orderBox').hidden=!items.length;
   $('sampleNote').hidden=!isSample;
   $('count').textContent=items.length?`Order · ${items.length} image${items.length>1?'s':''}`:'Order';
+  $('ginfo').textContent=info;$('ginfo').hidden=!info;
   items.forEach((it,i)=>{
-    const li=document.createElement('li');li.className='item';li.draggable=true;li.dataset.id=it.id;
-    li.innerHTML=`<span class="handle" aria-hidden="true">⋮⋮</span><span class="num">${i+1}</span><img alt=""><div class="meta"><div class="name"></div><div class="dims">${dims(it)}</div></div>
+    const li=document.createElement('li');li.className='item'+(multi&&inCur.has(it.id)?' cur':'');li.draggable=true;li.dataset.id=it.id;
+    li.innerHTML=`<span class="handle" aria-hidden="true">⋮⋮</span><span class="num">${i+1}</span><img alt=""><div class="meta"><div class="name"></div><div class="dims">${dims(it)}<span class="gtag"></span></div></div>
       <div class="acts"><button class="icon up" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="icon down" aria-label="Move down" ${i===items.length-1?'disabled':''}>↓</button><button class="icon del" aria-label="Remove">✕</button></div>`;
     li.querySelector('img').src=it.url;
     li.querySelector('.name').textContent=it.name;li.querySelector('.name').title=it.name;
+    const g=tags.get(it.id);
+    if(g)li.querySelector('.gtag').textContent='→ image '+g.map(x=>x+1).join(', ');
+    if(g)li.addEventListener('click',e=>{if(e.target.closest('button'))return;cur=g[0];render()});
     li.querySelector('.up').onclick=()=>move(i,i-1);
     li.querySelector('.down').onclick=()=>move(i,i+1);
-    li.querySelector('.del').onclick=()=>{items.splice(i,1);render()};
+    li.querySelector('.del').onclick=()=>{if(it.url.startsWith('blob:'))URL.revokeObjectURL(it.url);items.splice(i,1);render()};
     li.addEventListener('dragstart',e=>{dragId=it.id;li.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x')});
     li.addEventListener('dragend',()=>{dragId=null;li.classList.remove('dragging');document.querySelectorAll('.target').forEach(n=>n.classList.remove('target'))});
     li.addEventListener('dragover',e=>{if(dragId==null)return;e.preventDefault();li.classList.add('target')});
@@ -248,17 +391,24 @@ function render(){
       const from=items.findIndex(x=>x.id===dragId), to=items.findIndex(x=>x.id===it.id);move(from,to)});
     ul.appendChild(li);
   });
-  draw();
+  $('gnav').hidden=!multi;
+  $('gpos').textContent=multi?`Image ${cur+1} of ${groups.length} · #${groups[cur].label}`:'';
+  $('gprev').disabled=cur<=0;$('gnext').disabled=cur>=groups.length-1;
+  $('zip').hidden=!multi;$('zip').textContent=`Download all ${groups.length} (ZIP)`;
+  $('save').className='btn'+(multi?'':' primary');
+  $('save').textContent=multi?'Download this one':'Download';
+  draw(groups[cur]?.list||[]);
+  persist();
 }
 let dragId=null;
 function move(from,to){if(to<0||to>=items.length||from===to)return;const [x]=items.splice(from,1);items.splice(to,0,x);render()}
 
-function layout(){
+function layout(list){
   const gap=Math.max(0,+$('gap').value||0), mode=$('width').value;
-  if(!items.length)return null;
-  const ws=items.map(W);
+  if(!list.length)return null;
+  const ws=list.map(W);
   const target=mode==='narrowest'?Math.min(...ws):Math.max(...ws);
-  const parts=items.map(it=>{
+  const parts=list.map(it=>{
     if(mode==='original')return {it,w:W(it),h:H(it)};
     return {it,w:target,h:Math.round(H(it)*target/W(it))};
   });
@@ -266,47 +416,79 @@ function layout(){
   const height=parts.reduce((s,p)=>s+p.h,0)+gap*(parts.length-1);
   return {parts,width,height,gap};
 }
+function paint(c,L){
+  const x=c.getContext('2d');
+  c.width=L.width;c.height=L.height;
+  x.fillStyle=$('gapColor').value;x.fillRect(0,0,L.width,L.height);
+  x.imageSmoothingQuality='high';
+  let y=0;
+  for(const p of L.parts){x.drawImage(p.it.img,Math.round((L.width-p.w)/2),y,p.w,p.h);y+=p.h+L.gap}
+}
 
-function draw(){
-  const L=layout();
+let shown=[];
+function draw(list=shown){
+  shown=list;
+  const L=layout(list);
   const has=!!L;
   $('save').disabled=!has;$('copy').disabled=!has;
   cv.hidden=!has;$('ph').hidden=has;
   if(!L){cv.width=10;cv.height=10;ctx.clearRect(0,0,10,10);$('size').textContent='';return}
-  cv.width=L.width;cv.height=L.height;
-  ctx.fillStyle=$('gapColor').value;ctx.fillRect(0,0,L.width,L.height);
-  ctx.imageSmoothingQuality='high';
-  let y=0;
-  for(const p of L.parts){ctx.drawImage(p.it.img,Math.round((L.width-p.w)/2),y,p.w,p.h);y+=p.h+L.gap}
+  paint(cv,L);
   $('size').textContent=`${L.width} × ${L.height} px`;
 }
 
-function exportBlob(){
-  const jpg=$('fmt').value==='jpg';
-  return new Promise(res=>cv.toBlob(res,jpg?'image/jpeg':'image/png',0.92));
+function ext(){return $('fmt').value==='jpg'?'jpg':'png'}
+function exportBlob(c){
+  const jpg=ext()==='jpg';
+  return canvasBlob(c,jpg?'image/jpeg':'image/png',0.92);
 }
-function filename(){
-  let n=($('fname').value||'stacked').trim().replace(/\.(png|jpe?g)$/i,'')||'stacked';
-  return n+($('fmt').value==='jpg'?'.jpg':'.png');
+function baseName(){return ($('fname').value||'stacked').trim().replace(/\.(png|jpe?g|zip)$/i,'')||'stacked'}
+function groupFile(i,groups){
+  if(groups.length<2)return baseName()+'.'+ext();
+  return `${baseName()}-${String(i+1).padStart(String(groups.length).length,'0')} (${groups[i].label}).${ext()}`;
 }
+const TOO_BIG='The image is too large for this browser to export. Try fewer images per group or JPG.';
 
 $('save').onclick=async()=>{
   if(isSample){toast('Add your own images first. These are examples.',true);return}
-  const blob=await exportBlob();
-  if(!blob){toast('The image is too large for this browser to export. Try fewer images or JPG.',true);return}
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename();
-  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-  toast('Saved '+filename());
+  const blob=await exportBlob(cv);
+  if(!blob){toast(TOO_BIG,true);return}
+  const {groups}=computeGroups(), name=groupFile(cur,groups);
+  saveBlob(blob,name);
+  toast('Saved '+name);
+};
+
+$('zip').onclick=async()=>{
+  if(isSample){toast('Add your own images first. These are examples.',true);return}
+  const btn=$('zip');btn.disabled=true;
+  try{
+    if(!window.JSZip)await loadScript(JSZIP);
+    const {groups}=computeGroups(), zip=new JSZip(), c=document.createElement('canvas');
+    for(let i=0;i<groups.length;i++){
+      toast(`Building image ${i+1} of ${groups.length}…`,false,true);
+      paint(c,layout(groups[i].list));
+      const blob=await exportBlob(c);
+      if(!blob)throw new Error(TOO_BIG);
+      zip.file(groupFile(i,groups),blob);
+    }
+    toast('Zipping…',false,true);
+    saveBlob(await zip.generateAsync({type:'blob'}),baseName()+'.zip');
+    toast(`Saved ${baseName()}.zip with ${groups.length} images.`);
+  }catch(e){toast(e.message===TOO_BIG?TOO_BIG:'Could not build the ZIP. Check your connection and try again.',true)}
+  finally{btn.disabled=false}
 };
 
 $('copy').onclick=async()=>{
   if(isSample){toast('Add your own images first. These are examples.',true);return}
   try{
-    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    const blob=await canvasBlob(cv,'image/png');
     await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
     toast('Copied. Paste it into WhatsApp or anywhere else.');
   }catch(e){toast('This browser blocked copying images. Use Download instead.',true)}
 };
+
+$('gprev').onclick=()=>{cur--;render()};
+$('gnext').onclick=()=>{cur++;render()};
 
 $('pick').onclick=()=>$('file').click();
 $('pasteBtn').onclick=pasteFromClipboard;
@@ -314,14 +496,14 @@ $('file').onchange=e=>{addFiles(e.target.files);e.target.value=''};
 const drop=$('drop');
 ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{if(dragId!=null)return;e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,()=>drop.classList.remove('over')));
-drop.addEventListener('drop',e=>{if(dragId!=null)return;e.preventDefault();if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files)});
+drop.addEventListener('drop',e=>{if(dragId!=null)return;e.preventDefault();e.stopPropagation();if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files)});
 // Allow dropping files anywhere on the page
 document.addEventListener('dragover',e=>{if(dragId==null&&e.dataTransfer.types.includes('Files'))e.preventDefault()});
 document.addEventListener('drop',e=>{if(dragId==null&&e.dataTransfer.files.length){e.preventDefault();addFiles(e.dataTransfer.files)}});
 // Paste works anywhere on the page: screenshots, "Copy image" from a browser, or files copied in Finder/Explorer
 document.addEventListener('paste',e=>{
   const dt=e.clipboardData;if(!dt)return;
-  let files=[...dt.files].filter(f=>f.type.startsWith('image/'));
+  let files=[...dt.files].filter(f=>f.type.startsWith('image/')||isPdf(f));
   if(!files.length)files=[...dt.items].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile()).filter(Boolean);
   if(files.length){e.preventDefault();addFiles(files)}
   else if(!e.target.closest?.('input,textarea'))toast(NO_IMAGE,true);
@@ -332,16 +514,29 @@ $('sort').onchange=e=>{
   if(v==='az')items.sort(cmp);else if(v==='za')items.sort((a,b)=>cmp(b,a));else if(v==='added')items.sort((a,b)=>a.id-b.id);
   e.target.value='';render();
 };
-$('clear').onclick=()=>{items.forEach(it=>{if(it.url&&it.url.startsWith('blob:'))URL.revokeObjectURL(it.url)});items=[];isSample=false;render()};
-['gap','gapColor','width'].forEach(id=>$(id).addEventListener('input',draw));
+$('clear').onclick=()=>{
+  if(!isSample&&items.length>3&&!confirm(`Remove all ${items.length} images?`))return;
+  items.forEach(it=>{if(it.url&&it.url.startsWith('blob:'))URL.revokeObjectURL(it.url)});items=[];isSample=false;cur=0;render();
+};
+['gap','gapColor','width'].forEach(id=>$(id).addEventListener('input',()=>draw()));
 
+function syncGroupFields(){
+  const m=$('gmode').value;
+  $('gsize').hidden=$('gsizeL').hidden=m!=='every';
+  $('granges').hidden=$('grangesL').hidden=m!=='ranges';
+}
+$('gmode').addEventListener('change',()=>{syncGroupFields();cur=0;render()});
+['gsize','granges'].forEach(id=>$(id).addEventListener('input',()=>render()));
+
+const SETTINGS=['gap','gapColor','width','fmt','gmode','gsize','granges'];
 try{const s=JSON.parse(localStorage.getItem('stacker-settings')||'{}');
-  ['gap','gapColor','width','fmt'].forEach(k=>{if(s[k]!=null)$(k).value=s[k]})}catch(e){}
-['gap','gapColor','width','fmt'].forEach(k=>$(k).addEventListener('change',()=>{
-  try{localStorage.setItem('stacker-settings',JSON.stringify({gap:$('gap').value,gapColor:$('gapColor').value,width:$('width').value,fmt:$('fmt').value}))}catch(e){}
+  SETTINGS.forEach(k=>{if(s[k]!=null)$(k).value=s[k]})}catch(e){}
+SETTINGS.forEach(k=>$(k).addEventListener('change',()=>{
+  try{localStorage.setItem('stacker-settings',JSON.stringify(Object.fromEntries(SETTINGS.map(k=>[k,$(k).value]))))}catch(e){}
 }));
+syncGroupFields();
 
-initSample();render();
+restore();
 </script>
 
 </body>

@@ -1,4 +1,5 @@
 import { CAPTION_RATIO, fillCaption, textOn, type StackMeta } from './captions';
+import { cutPoints, SLIDE } from './carousel';
 import { seamBetween } from './join';
 import { CANVAS_LIMITS, layout, type Layout } from './layout';
 import { renderPage } from './pdf';
@@ -167,55 +168,107 @@ export async function paint(c: HTMLCanvasElement, L: StackLayout, s: Settings, h
 export const canvasBlob = (c: HTMLCanvasElement, type: string, q?: number) =>
   new Promise<Blob | null>(r => c.toBlob(r, type, q));
 
-async function renderExport(st: Stack, s: Settings) {
+/**
+ * Carousel cuts for a layout: ranges along the long axis (down a stack, across a side-by-side
+ * strip), in the layout's own pixels. Null when slicing is off.
+ */
+export function slicesOf(L: StackLayout, s: Settings) {
+  if (s.slice === 'off') return null;
+  const S = SLIDE[s.slice], side = s.arrange === 'horizontal';
+  const len = side ? L.width : L.height;
+  const page = side ? S.w * (L.height / S.h) : S.h * (L.width / S.w);
+  const spans = L.parts.map(p => (side ? [p.x, p.x + p.w] : [p.y, p.y + p.h]) as [number, number]);
+  if (!side && L.headH) spans.push([0, L.headH]);
+  if (!side && L.footH) spans.push([L.height - L.footH, L.height]);
+  return { side, cuts: cutPoints(len, page, spans, s.sliceWhole) };
+}
+
+/** A stack drawn at export quality: one canvas, or one per carousel slide when slicing. */
+async function renderPieces(st: Stack, s: Settings): Promise<HTMLCanvasElement[]> {
   const L = stackLayout(st.list, s, true);
   if (!L) throw new Error('Nothing to export');
   const c = document.createElement('canvas');
   await paint(c, L, s, true, st);
-  return c;
+  const sl = slicesOf(L, s);
+  if (!sl || s.slice === 'off') return [c];
+  const S = SLIDE[s.slice];
+  const k = sl.side ? S.h / L.height : S.w / L.width;
+  const pieces = sl.cuts.map(([a, b]) => {
+    const p = document.createElement('canvas');
+    p.width = S.w;
+    p.height = S.h;
+    const x = p.getContext('2d')!;
+    x.fillStyle = s.gapColor;
+    x.fillRect(0, 0, S.w, S.h);
+    x.imageSmoothingQuality = 'high';
+    // Whole images sit centred on their slide; plain cuts start at the top (or left) edge
+    const len = (b - a) * k, off = s.sliceWhole ? ((sl.side ? S.w : S.h) - len) / 2 : 0;
+    if (sl.side) x.drawImage(c, a, 0, b - a, L.height, off, 0, len, S.h);
+    else x.drawImage(c, 0, a, L.width, b - a, 0, off, S.w, len);
+    return p;
+  });
+  c.width = c.height = 0;
+  return pieces;
 }
 
-export async function imageBlob(st: Stack, s: Settings) {
-  const c = await renderExport(st, s);
+const encode = async (c: HTMLCanvasElement, s: Settings) => {
   const b = s.fmt === 'png' ? await canvasBlob(c, 'image/png') : await canvasBlob(c, 'image/jpeg', 0.95);
   c.width = c.height = 0;
   if (!b) throw new Error(TOO_BIG);
   return b;
+};
+
+/** "stacked-2 (6-10).png" → "stacked-2 (6-10) - 3.png" for the third slide. */
+const slideName = (name: string, i: number) => name.replace(/(\.\w+)$/, ` - ${i + 1}$1`);
+
+/** The image files for one stack: one, or one per slide when slicing. */
+export async function stackFiles(st: Stack, s: Settings, name: string) {
+  const pieces = await renderPieces(st, s);
+  const out: { name: string; blob: Blob }[] = [];
+  for (const [i, c] of pieces.entries()) out.push({ name: pieces.length > 1 ? slideName(name, i) : name, blob: await encode(c, s) });
+  return out;
 }
 
-/** One page per stack, each page sized to its image (PDF pages max out at 14400pt). */
+/** One page per stack (or per slide), each page sized to its image (PDF pages max out at 14400pt). */
 export async function buildPdf(stacks: Stack[], s: Settings, progress?: (i: number) => void) {
   const { jsPDF } = await import('jspdf');
   let pdf: InstanceType<typeof jsPDF> | undefined;
   for (let i = 0; i < stacks.length; i++) {
     progress?.(i);
-    const c = await renderExport(stacks[i], s);
-    const blob = await canvasBlob(c, 'image/jpeg', 0.95);
-    if (!blob) throw new Error(TOO_BIG);
-    const k = Math.min(0.75, 14400 / Math.max(c.width, c.height));
-    const pw = c.width * k, ph = c.height * k, o = pw > ph ? 'l' : 'p';
-    c.width = c.height = 0;
-    if (!pdf) pdf = new jsPDF({ unit: 'pt', format: [pw, ph], orientation: o, compress: true });
-    else pdf.addPage([pw, ph], o);
-    pdf.addImage(new Uint8Array(await blob.arrayBuffer()), 'JPEG', 0, 0, pw, ph, undefined, 'NONE');
+    for (const c of await renderPieces(stacks[i], s)) {
+      const blob = await canvasBlob(c, 'image/jpeg', 0.95);
+      if (!blob) throw new Error(TOO_BIG);
+      const k = Math.min(0.75, 14400 / Math.max(c.width, c.height));
+      const pw = c.width * k, ph = c.height * k, o = pw > ph ? 'l' : 'p';
+      c.width = c.height = 0;
+      if (!pdf) pdf = new jsPDF({ unit: 'pt', format: [pw, ph], orientation: o, compress: true });
+      else pdf.addPage([pw, ph], o);
+      pdf.addImage(new Uint8Array(await blob.arrayBuffer()), 'JPEG', 0, 0, pw, ph, undefined, 'NONE');
+    }
   }
   return pdf!.output('blob');
 }
 
-export async function buildZip(files: { name: string; stack: Stack }[], s: Settings, progress?: (i: number) => void) {
+export async function zipFiles(files: { name: string; blob: Blob }[]) {
   const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
-  for (let i = 0; i < files.length; i++) {
-    progress?.(i);
-    zip.file(files[i].name, await imageBlob(files[i].stack, s));
-  }
+  for (const f of files) zip.file(f.name, f.blob);
   return zip.generateAsync({ type: 'blob' });
 }
 
-/** ClipboardItem gets a promise so the write starts inside the click (Safari requires that). */
+export async function buildZip(files: { name: string; stack: Stack }[], s: Settings, progress?: (i: number) => void) {
+  const all: { name: string; blob: Blob }[] = [];
+  for (let i = 0; i < files.length; i++) {
+    progress?.(i);
+    all.push(...(await stackFiles(files[i].stack, s, files[i].name)));
+  }
+  return zipFiles(all);
+}
+
+/** ClipboardItem gets a promise so the write starts inside the click (Safari requires that). Copies the first slide when slicing. */
 export function copyStack(st: Stack, s: Settings) {
-  const blob = renderExport(st, s)
-    .then(c => canvasBlob(c, 'image/png'))
+  const blob = renderPieces(st, s)
+    .then(p => canvasBlob(p[0], 'image/png'))
     .then(b => b || Promise.reject(new Error(TOO_BIG)));
   return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 }
@@ -231,7 +284,7 @@ export const canShareFiles = (() => {
 })();
 
 /**
- * Renders stacks as files ready for the share sheet: one image per stack,
+ * Renders stacks as files ready for the share sheet: one image per stack (or per slide),
  * or a single PDF holding every stack as a page.
  */
 export async function shareFiles(stacks: Stack[], names: string[], pdfName: string, s: Settings, progress?: (i: number) => void) {
@@ -239,8 +292,7 @@ export async function shareFiles(stacks: Stack[], names: string[], pdfName: stri
   const files: File[] = [];
   for (let i = 0; i < stacks.length; i++) {
     progress?.(i);
-    const b = await imageBlob(stacks[i], s);
-    files.push(new File([b], names[i], { type: b.type }));
+    for (const f of await stackFiles(stacks[i], s, names[i])) files.push(new File([f.blob], f.name, { type: f.blob.type }));
   }
   return files;
 }

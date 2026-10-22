@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { paint, stackAdvice, stackLayout } from '../lib/render';
+import { SLIDE } from '../lib/carousel';
+import { paint, slicesOf, stackAdvice, stackLayout } from '../lib/render';
 import type { StackMeta } from '../lib/captions';
 import type { Format, Item, Quality, Settings } from '../lib/types';
 import type { ToastState } from '../hooks';
@@ -36,10 +37,29 @@ export function Preview(p: Props) {
   const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap, s.arrange, s.columns]);
   const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap, s.arrange, s.columns]);
   const wa = s.quality === 'whatsapp';
+  const slides = useMemo(() => (E && s.slice !== 'off' ? slicesOf(E, s)?.cuts.length ?? 0 : 0), [E, s.slice, s.sliceWhole, s.arrange]);
   const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap, s.arrange, s.columns]);
   useEffect(() => {
-    if (L && cv.current) paint(cv.current, L, s, false, p.meta);
-  }, [L, s.gapColor, s.caption, s.numbers, s.watermark, p.meta]);
+    if (!L || !cv.current) return;
+    const c = cv.current;
+    paint(c, L, s, false, p.meta).then(() => {
+      // Carousel cuts as dashed lines across the preview
+      const sl = slicesOf(L, s);
+      if (!sl) return;
+      const x = c.getContext('2d')!;
+      const lw = Math.max(2, Math.round((sl.side ? L.height : L.width) / 300));
+      x.save();
+      x.lineWidth = lw;
+      x.setLineDash([lw * 4, lw * 3]);
+      x.strokeStyle = '#d0342c';
+      for (const [, end] of sl.cuts.slice(0, -1)) {
+        x.beginPath();
+        if (sl.side) { x.moveTo(end, 0); x.lineTo(end, L.height); } else { x.moveTo(0, end); x.lineTo(L.width, end); }
+        x.stroke();
+      }
+      x.restore();
+    });
+  }, [L, s.gapColor, s.caption, s.numbers, s.watermark, s.slice, s.sliceWhole, p.meta]);
 
   return (
     <section className="panel preview" id="export" aria-label="Preview">
@@ -58,7 +78,7 @@ export function Preview(p: Props) {
             className="stat"
             title={list.some(it => it.src) ? '' : 'These images are exported at their full original size. HD and 4K sharpen pages imported from a PDF.'}
           >
-            {E.width} × {E.height} px
+            {slides ? `${slides} slide${slides > 1 ? 's' : ''} · ${SLIDE[s.slice as 'portrait'].w} × ${SLIDE[s.slice as 'portrait'].h}` : `${E.width} × ${E.height} px`}
             {E.reduced && ' · reduced to fit browser limit'}
             {E.joined.some(Boolean) && ` · ${E.joined.filter(Boolean).length} joined`}
             {wa && ' · fits WhatsApp HD'}
@@ -100,8 +120,25 @@ export function Preview(p: Props) {
           <option value="whatsapp">WhatsApp · fits HD send</option>
           <option value="std">Standard</option>
         </select>
+        <select
+          id="slice"
+          aria-label="Slices"
+          value={s.slice}
+          title="Cut each stack into Instagram carousel slides"
+          onChange={e => p.update({ slice: e.target.value as Settings['slice'] })}
+        >
+          <option value="off">One image per stack</option>
+          <option value="portrait">Instagram slides 4:5</option>
+          <option value="square">Instagram slides 1:1</option>
+        </select>
         <input type="text" id="fname" aria-label="File name" value={s.fname} onChange={e => p.update({ fname: e.target.value })} />
       </div>
+      {s.slice !== 'off' && (
+        <label className="check">
+          <input type="checkbox" checked={s.sliceWhole} onChange={e => p.update({ sliceWhole: e.target.checked })} />
+          Keep images whole (cut between images, not through them)
+        </label>
+      )}
       <div className="export">
         <button className={'btn' + (multi ? '' : ' primary')} disabled={!L || p.busy} onClick={p.onSave}>
           {multi ? 'Download this one' : 'Download'}

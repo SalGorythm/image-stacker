@@ -52,6 +52,10 @@ export interface Settings {
   joinOverlap: boolean;
   arrange: 'vertical' | 'horizontal' | 'grid';
   columns: number;
+  /** Cut each stack into Instagram carousel slides. */
+  slice: 'off' | 'portrait' | 'square';
+  /** Cut between images rather than through them. */
+  sliceWhole: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -74,6 +78,8 @@ export const DEFAULT_SETTINGS: Settings = {
   joinOverlap: false,
   arrange: 'vertical',
   columns: 2,
+  slice: 'off',
+  sliceWhole: true,
 };
 
 /** Target width for PDF pages at each quality (0 = as stored). */

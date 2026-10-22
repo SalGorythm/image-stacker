@@ -14,7 +14,7 @@ import {
 } from './lib/files';
 import { computeGroups } from './lib/groups';
 import { dropPdf, isDeck, isPdf, openPdf, pdfPages, type PdfInfo } from './lib/pdf';
-import { buildPdf, buildZip, canShareFiles, copyStack, imageBlob, saveBlob, shareFiles, TOO_BIG, type Stack } from './lib/render';
+import { buildPdf, buildZip, canShareFiles, copyStack, saveBlob, shareFiles, stackFiles, TOO_BIG, zipFiles, type Stack } from './lib/render';
 import { loadItems, loadSettings, saveItems, saveSettings } from './lib/storage';
 import type { Item, PdfSrc, Settings } from './lib/types';
 
@@ -188,8 +188,13 @@ export default function App() {
   const save = () => run(async () => {
     const name = fileName(s.fname, s.fmt, c, labels);
     show('Preparing…', { keep: true });
-    saveBlob(s.fmt === 'pdf' ? await buildPdf([stack], s) : await imageBlob(stack, s), name);
-    show('Saved ' + name);
+    if (s.fmt === 'pdf') { saveBlob(await buildPdf([stack], s), name); return show('Saved ' + name); }
+    const files = await stackFiles(stack, s, name);
+    if (files.length === 1) { saveBlob(files[0].blob, name); return show('Saved ' + name); }
+    // Carousel slides of one stack arrive together in a ZIP
+    const zipName = name.replace(/\.\w+$/, ' slides.zip');
+    saveBlob(await zipFiles(files), zipName);
+    show(`Saved ${zipName} with ${files.length} slides.`);
   });
   const saveAll = () => run(async () => {
     const n = groups.length, base = baseName(s.fname);
@@ -302,6 +307,10 @@ export default function App() {
         if (isSample || !items.length) { goTo('add'); show('Add an image first, then use ◩ on its row to blur or hide parts.'); return; }
         setRedacting(list[0] ?? items[0]);
       },
+    },
+    {
+      key: 'carousel', label: 'Carousel', hint: 'Cut stacks into Instagram slides',
+      run: () => { update({ slice: s.slice === 'off' ? 'portrait' : s.slice }); goTo('export'); show('Carousel slicing is on: each stack is cut into 1080 × 1350 slides.'); },
     },
     {
       key: 'whatsapp', label: 'WhatsApp', hint: 'Keep stacks sharp after sending on WhatsApp',

@@ -69,7 +69,7 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
 .placeholder{color:var(--muted);text-align:center;padding:64px 16px}
 .export{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .export #fname{flex:1 1 140px;width:auto}
-.export #fmt,.export #quality{flex:0 0 auto;width:auto}
+.export #fmt,.export #quality,.export #slice{flex:0 0 auto;width:auto}
 .btn.danger{color:var(--danger)}
 .btn.danger:hover{border-color:var(--danger)}
 .toast-act{border:0;background:none;color:inherit;font:inherit;font-weight:600;text-decoration:underline;cursor:pointer;padding:0 0 0 10px}
@@ -117,7 +117,7 @@ button.num:hover{color:var(--accent);text-decoration:underline dotted}
 }
 @media (max-width:480px){
   .export .btn{flex:1 1 40%}
-  .export #fmt,.export #quality{flex:1 1 40%}
+  .export #fmt,.export #quality,.export #slice{flex:1 1 40%}
   .settings{grid-template-columns:68px minmax(0,1fr)}
   .intro{font-size:13px}
 }

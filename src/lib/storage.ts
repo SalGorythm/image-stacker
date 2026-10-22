@@ -64,7 +64,7 @@ const SETTINGS_KEY = 'stacker-settings';
 const OPTIONS: Partial<Record<keyof Settings, readonly string[]>> = {
   width: ['widest', 'narrowest', 'original'],
   fmt: ['png', 'jpg', 'pdf'],
-  quality: ['hd', '4k', 'std'],
+  quality: ['hd', '4k', 'std', 'whatsapp'],
   gmode: ['all', 'every', 'ranges'],
   gtail: ['rest', 'repeat'],
 };

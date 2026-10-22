@@ -1,14 +1,24 @@
 import { CANVAS_LIMITS, layout, type Layout } from './layout';
 import { renderPage } from './pdf';
-import { imgH, imgW, QUALITY_WIDTH, type Item, type Settings } from './types';
+import { imgH, imgW, QUALITY_WIDTH, WHATSAPP_BOX, type Item, type Settings } from './types';
+import { whatsappAdvice } from './whatsapp';
 
 export const TOO_BIG = 'The image is too large for this browser to export. Try fewer images per group, Standard quality, or JPG.';
 
 const size = (it: Item) => ({ w: imgW(it), h: imgH(it), vector: !!it.src });
 
 export function stackLayout(list: Item[], s: Settings, hq: boolean): Layout<Item> | null {
-  return layout(list, size, { gap: s.gap, width: s.width, q: hq ? QUALITY_WIDTH[s.quality] : 0, ...CANVAS_LIMITS });
+  return layout(list, size, {
+    gap: s.gap,
+    width: s.width,
+    q: hq ? QUALITY_WIDTH[s.quality] : 0,
+    ...CANVAS_LIMITS,
+    box: hq && s.quality === 'whatsapp' ? WHATSAPP_BOX : undefined,
+  });
 }
+
+export const stackAdvice = (list: Item[], s: Settings) =>
+  whatsappAdvice(list, size, s.gap, s.width, QUALITY_WIDTH.whatsapp);
 
 /** Draws a stack. With hq, PDF pages are re-rendered at the size they're drawn instead of scaling the stored preview. */
 export async function paint(c: HTMLCanvasElement, L: Layout<Item>, bg: string, hq: boolean) {

@@ -20,7 +20,7 @@ export type WidthMode = 'widest' | 'narrowest' | 'original';
 export type GroupMode = 'all' | 'every' | 'ranges';
 export type Tail = 'rest' | 'repeat';
 export type Format = 'png' | 'jpg' | 'pdf';
-export type Quality = 'hd' | '4k' | 'std';
+export type Quality = 'hd' | '4k' | 'std' | 'whatsapp';
 
 export interface Settings {
   gap: number;
@@ -50,7 +50,10 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 /** Target width for PDF pages at each quality (0 = as stored). */
-export const QUALITY_WIDTH: Record<Quality, number> = { std: 0, hd: 2560, '4k': 3840 };
+export const QUALITY_WIDTH: Record<Quality, number> = { std: 0, hd: 2560, '4k': 3840, whatsapp: 2692 };
+
+/** WhatsApp's HD photo limit: anything bigger is scaled down on send, which blurs tall stacks. */
+export const WHATSAPP_BOX = { long: 4096, short: 2692 };
 
 export const imgW = (it: Pick<Item, 'img'>) =>
   it.img instanceof HTMLImageElement ? it.img.naturalWidth : it.img.width;

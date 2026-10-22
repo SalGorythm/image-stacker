@@ -286,6 +286,13 @@ export default function App() {
           onSave={save}
           onSaveAll={saveAll}
           onCopy={copy}
+          onSplit={max => {
+            // Spread evenly: 10 images with a max of 6 become 5 + 5, not 6 + 4, so every stack is wider
+            const N = items.length, k = Math.ceil(N / Math.ceil(N / max));
+            update({ gmode: 'every', sizes: [String(k)] });
+            setCur(0);
+            show(`Split into stacks of ${k}. Each one fits WhatsApp HD.`);
+          }}
         />
       </div>
     </div>

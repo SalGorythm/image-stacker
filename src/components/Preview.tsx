@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { paint, stackLayout } from '../lib/render';
+import { paint, stackAdvice, stackLayout } from '../lib/render';
 import type { Format, Item, Quality, Settings } from '../lib/types';
 import type { ToastState } from '../hooks';
 
@@ -17,6 +17,8 @@ interface Props {
   onSave: () => void;
   onSaveAll: () => void;
   onCopy: () => void;
+  /** Re-split everything into stacks of this many images. */
+  onSplit: (perStack: number) => void;
 }
 
 export function Preview(p: Props) {
@@ -27,6 +29,8 @@ export function Preview(p: Props) {
   // Preview uses stored images; the size label shows what the export will be at the chosen quality
   const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width]);
   const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality]);
+  const wa = s.quality === 'whatsapp';
+  const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width]);
   useEffect(() => {
     if (L && cv.current) paint(cv.current, L, s.gapColor, false);
   }, [L, s.gapColor]);
@@ -48,10 +52,25 @@ export function Preview(p: Props) {
             className="stat"
             title={list.some(it => it.src) ? '' : 'These images are exported at their full original size. HD and 4K sharpen pages imported from a PDF.'}
           >
-            {E.width} × {E.height} px{E.reduced && ' · reduced to fit browser limit'}
+            {E.width} × {E.height} px
+            {E.reduced && ' · reduced to fit browser limit'}
+            {wa && ' · fits WhatsApp HD'}
           </span>
         )}
       </div>
+      {advice && !advice.readable && (
+        <div className="warn" role="note">
+          <span>
+            Too tall for WhatsApp: this stack would arrive only {advice.width}px wide, so text will be hard to read.
+            {advice.maxPerStack < list.length && ` Stacks of up to ${advice.maxPerStack} image${advice.maxPerStack > 1 ? 's' : ''} stay sharp.`}
+          </span>
+          {advice.maxPerStack < list.length && (
+            <button className="btn sm" onClick={() => p.onSplit(advice.maxPerStack)}>
+              Split to fit WhatsApp
+            </button>
+          )}
+        </div>
+      )}
       <div className="stage">
         <canvas ref={cv} hidden={!L} />
         {!L && <p className="placeholder">Add images and the stacked result shows up here.</p>}
@@ -66,11 +85,12 @@ export function Preview(p: Props) {
           id="quality"
           aria-label="Quality"
           value={s.quality}
-          title="HD and 4K re-render PDF pages at that width, so text stays sharp. Photos and screenshots are kept at their full original size."
+          title="HD and 4K re-render PDF pages at that width, so text stays sharp. WhatsApp fits each stack inside 4096 × 2692 so WhatsApp's HD send doesn't shrink it again. Photos and screenshots are never enlarged."
           onChange={e => p.update({ quality: e.target.value as Quality })}
         >
           <option value="hd">HD · 2560px</option>
           <option value="4k">4K · 3840px</option>
+          <option value="whatsapp">WhatsApp · fits HD send</option>
           <option value="std">Standard</option>
         </select>
         <input type="text" id="fname" aria-label="File name" value={s.fname} onChange={e => p.update({ fname: e.target.value })} />

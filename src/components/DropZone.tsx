@@ -8,10 +8,13 @@ interface Props {
   onPasteClick: () => void;
   /** Owned by App so the header's "PDF pages" link can open the same chooser. */
   inputRef: RefObject<HTMLInputElement | null>;
+  /** What this tool takes, e.g. "images or a PDF" (default) or "photos or signatures". */
+  what?: string;
+  accept?: string;
 }
 
 // Dropping files is handled page-wide in App; this only shows the highlight.
-export function DropZone({ flash, onFiles, onPasteClick, inputRef: input }: Props) {
+export function DropZone({ flash, onFiles, onPasteClick, inputRef: input, what = 'images or a PDF', accept = 'image/*,application/pdf,.pdf' }: Props) {
   const [over, setOver] = useState(false);
   const enter = (e: React.DragEvent) => {
     if (drag.id != null) return;
@@ -28,8 +31,8 @@ export function DropZone({ flash, onFiles, onPasteClick, inputRef: input }: Prop
       onDrop={() => setOver(false)}
     >
       <strong>
-        <span className="mouse-only">Drop images or a PDF here</span>
-        <span className="touch-only">Add images or a PDF</span>
+        <span className="mouse-only">Drop {what} here</span>
+        <span className="touch-only">Add {what}</span>
       </strong>
       <small className="kbd-hint">
         or press <kbd>{PASTE_KEY}</kbd> anywhere to paste from the clipboard
@@ -40,7 +43,7 @@ export function DropZone({ flash, onFiles, onPasteClick, inputRef: input }: Prop
         <input
           ref={input}
           type="file"
-          accept="image/*,application/pdf,.pdf"
+          accept={accept}
           multiple
           hidden
           onChange={e => {

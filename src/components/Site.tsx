@@ -5,8 +5,18 @@ export interface NavItem {
   run: () => void;
 }
 
+export interface ToolLink {
+  key: string;
+  label: string;
+  href: string;
+  active: boolean;
+}
+
 interface Props {
-  nav: NavItem[];
+  tools: ToolLink[];
+  /** The stacker's own sections, shown under the header while the stacker is open. */
+  sections: NavItem[];
+  showSections: boolean;
   /** Shown when the browser can install the app (or on iPhone, where it explains how). */
   onInstall?: () => void;
   onHelp: () => void;
@@ -24,54 +34,66 @@ function Mark() {
   );
 }
 
-function Links({ nav }: { nav: NavItem[] }) {
+function Sections({ items }: { items: NavItem[] }) {
   return (
     <>
-      {nav.map(n => (
+      {items.map(n => (
         <button key={n.key} className="nav-link" title={n.hint} onClick={n.run}>{n.label}</button>
       ))}
     </>
   );
 }
 
-export function SiteHeader({ nav, onInstall, onHelp }: Props) {
+export function SiteHeader({ tools, sections, showSections, onInstall, onHelp }: Props) {
   return (
     <header className="site-head">
       <div className="site-head-in">
-        <a className="brand" href="/" aria-label="Image Stacker home">
+        <a className="brand" href="#/" aria-label="Image Stacker home">
           <Mark />
           <span>Image Stacker</span>
         </a>
-        <nav className="nav" aria-label="Tools">
-          <Links nav={nav} />
+        <nav className="tools" aria-label="Tools">
+          {tools.map(t => (
+            <a key={t.key} href={t.href} className={'tool-link' + (t.active ? ' on' : '')} aria-current={t.active ? 'page' : undefined}>
+              {t.label}
+            </a>
+          ))}
         </nav>
         <div className="head-actions">
           <button className="btn sm" onClick={onHelp}>How it works</button>
           {onInstall && <button className="btn sm primary" onClick={onInstall}>Install app</button>}
         </div>
       </div>
+      {showSections && (
+        <div className="site-sub">
+          <nav className="nav" aria-label="Stacker sections">
+            <Sections items={sections} />
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
 
-export function SiteFooter({ nav, onInstall, onHelp }: Props) {
+export function SiteFooter({ tools, sections, onInstall, onHelp }: Props) {
   return (
     <footer className="site-foot">
       <div className="site-foot-in">
         <div className="foot-about">
           <span className="brand"><Mark /><span>Image Stacker</span></span>
-          <p>Stack images and PDF slides into tall images, split them into groups, trim them and share them. Everything runs in your browser. Nothing is uploaded.</p>
+          <p>Stack images and PDF slides, fit photos and signatures to form limits, trim, caption and share. Everything runs in your browser. Nothing is uploaded.</p>
         </div>
         <nav className="foot-nav" aria-label="Tools">
           <span className="label">Tools</span>
-          <Links nav={nav} />
-        </nav>
-        <div className="foot-nav">
-          <span className="label">App</span>
+          {tools.map(t => <a key={t.key} className="nav-link" href={t.href}>{t.label}</a>)}
           <button className="nav-link" onClick={onHelp}>How it works</button>
           {onInstall && <button className="nav-link" onClick={onInstall}>Install app</button>}
           <span className="foot-note">Works offline once it has loaded.</span>
-        </div>
+        </nav>
+        <nav className="foot-nav" aria-label="Stacker sections">
+          <span className="label">Stacker</span>
+          <Sections items={sections} />
+        </nav>
       </div>
     </footer>
   );

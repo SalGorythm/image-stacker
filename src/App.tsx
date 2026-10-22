@@ -4,10 +4,11 @@ import { ImageList } from './components/ImageList';
 import { Help } from './components/Help';
 import { PagePicker } from './components/PagePicker';
 import { RedactEditor } from './components/RedactEditor';
-import { SiteFooter, SiteHeader, type NavItem } from './components/Site';
+import { SiteFooter, SiteHeader, type NavItem, type ToolLink } from './components/Site';
+import { FitTool } from './tools/FitTool';
 import { Preview } from './components/Preview';
 import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
-import { useEvent, useInstall, useToast } from './hooks';
+import { useEvent, useInstall, useRoute, useToast } from './hooks';
 import { drag } from './lib/drag';
 import {
   fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles, makeThumb,
@@ -242,22 +243,27 @@ export default function App() {
     }
   });
 
+  // Which tool is open; dropped and pasted files go to that tool
+  const route = useRoute();
+  const intake = useRef<((files: File[]) => void) | null>(null);
+  const take = useEvent((files: File[]) => (route === 'fit' && intake.current ? intake.current(files) : addFiles(files)));
+
   // Page-wide: drop files anywhere, paste anywhere, ← / → to step through stacks
   const onPaste = useEvent((e: ClipboardEvent) => {
     if (!e.clipboardData) return;
     const files = filesFromPaste(e.clipboardData, isPdf);
-    if (files.length) { e.preventDefault(); addFiles(files); }
+    if (files.length) { e.preventDefault(); take(files); }
     else if (!(e.target as HTMLElement).closest?.('input,textarea')) show(NO_IMAGE, { err: true });
   });
   const onKey = useEvent((e: KeyboardEvent) => {
-    if (!multi || e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest?.('input,select,textarea')) return;
+    if (route !== 'stack' || !multi || e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest?.('input,select,textarea')) return;
     if (e.key === 'ArrowLeft' && c > 0) setCur(c - 1);
     else if (e.key === 'ArrowRight' && c < groups.length - 1) setCur(c + 1);
   });
   useEffect(() => {
     const over = (e: DragEvent) => { if (drag.id == null && e.dataTransfer?.types.includes('Files')) e.preventDefault(); };
     const drop = (e: DragEvent) => {
-      if (drag.id == null && e.dataTransfer?.files.length) { e.preventDefault(); addFiles([...e.dataTransfer.files]); }
+      if (drag.id == null && e.dataTransfer?.files.length) { e.preventDefault(); take([...e.dataTransfer.files]); }
     };
     document.addEventListener('dragover', over);
     document.addEventListener('drop', drop);
@@ -269,7 +275,7 @@ export default function App() {
       document.removeEventListener('paste', onPaste);
       document.removeEventListener('keydown', onKey);
     };
-  }, [addFiles, onPaste, onKey]);
+  }, [take, onPaste, onKey]);
 
   // Header and footer navigation: each link takes you to its tool and briefly highlights it
   const fileInput = useRef<HTMLInputElement>(null);
@@ -283,9 +289,11 @@ export default function App() {
   };
   const [redacting, setRedacting] = useState<Item | null>(null);
   const { canInstall, install } = useInstall();
+  // Section links work from any tool: they open the stacker first
+  const toStacker = (then: () => void) => { location.hash = '#/'; setTimeout(then, 80); };
   const goTo = (id: string) => {
     const el = document.getElementById(id);
-    if (!el) return;
+    if (!el) { if (location.hash.startsWith('#/fit')) toStacker(() => goTo(id)); return; }
     el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     el.classList.remove('spot');
     void el.offsetWidth; // restart the highlight animation
@@ -297,7 +305,7 @@ export default function App() {
       key: 'pdf', label: 'PDF pages', hint: 'Import chosen pages from a PDF',
       run: () => {
         const el = fileInput.current;
-        if (!el) return;
+        if (!el) { if (location.hash.startsWith('#/fit')) toStacker(() => nav[1].run()); return; }
         goTo('add');
         el.accept = 'application/pdf,.pdf';
         el.click();
@@ -325,6 +333,10 @@ export default function App() {
     },
     { key: 'export', label: canShareFiles ? 'Share' : 'Download', hint: 'Share, download or copy your stacks', run: () => goTo('export') },
   ];
+  const tools: ToolLink[] = [
+    { key: 'stack', label: 'Stacker', href: '#/', active: route === 'stack' },
+    { key: 'fit', label: 'Fit to size', href: '#/fit', active: route === 'fit' },
+  ];
   const onInstall = canInstall
     ? async () => { if ((await install()) === 'ios') show('On iPhone or iPad: tap Share, then Add to Home Screen.', { keep: false }); }
     : undefined;
@@ -332,7 +344,7 @@ export default function App() {
   const n = list.length;
   return (
     <>
-    <SiteHeader nav={nav} onInstall={onInstall} onHelp={() => setHelp(true)} />
+    <SiteHeader tools={tools} sections={nav} showSections={route === 'stack'} onInstall={onInstall} onHelp={() => setHelp(true)} />
     {picking && <PagePicker info={picking.info} onDone={picking.done} />}
     {help && <Help onClose={closeHelp} />}
     {redacting && (
@@ -347,6 +359,7 @@ export default function App() {
         }}
       />
     )}
+    {route === 'fit' ? <FitTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 
@@ -426,7 +439,8 @@ export default function App() {
         />
       </div>
     </main>
-    <SiteFooter nav={nav} onInstall={onInstall} onHelp={() => setHelp(true)} />
+    )}
+    <SiteFooter tools={tools} sections={nav} showSections={route === 'stack'} onInstall={onInstall} onHelp={() => setHelp(true)} />
     </>
   );
 }

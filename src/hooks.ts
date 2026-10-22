@@ -57,3 +57,17 @@ export function useToast() {
   const hide = useCallback(() => { clearTimeout(timer.current); setToast(null); }, []);
   return { toast, show, hide };
 }
+
+export type Route = 'stack' | 'fit';
+const routeOf = (hash: string): Route => (hash.startsWith('#/fit') ? 'fit' : 'stack');
+
+/** Which tool is open, from the URL hash (#/ for the stacker, #/fit, …), so links and Back work. */
+export function useRoute() {
+  const [route, setRoute] = useState<Route>(() => routeOf(location.hash));
+  useEffect(() => {
+    const on = () => { setRoute(routeOf(location.hash)); window.scrollTo(0, 0); };
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  return route;
+}

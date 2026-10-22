@@ -9,7 +9,7 @@ interface Props {
 
 export function LayoutSettings({ s, update }: Props) {
   return (
-    <div className="section">
+    <div className="section" id="layout">
       <span className="label">Layout</span>
       <div className="settings">
         <label htmlFor="gap">Gap</label>
@@ -64,7 +64,7 @@ export function GroupSettings({ s, update, info, removeLabel, removeTitle, onRem
   const sizes = readSizes(s.sizes);
 
   return (
-    <div className="section">
+    <div className="section" id="groups">
       <span className="label">Groups</span>
       <div className="settings">
         <label htmlFor="gmode">Split</label>
@@ -159,7 +159,7 @@ const EDGES = [['t', 'Top'], ['b', 'Bottom'], ['l', 'Left'], ['r', 'Right']] as 
 export function TrimSettings({ s, update }: Props) {
   const any = s.autoTrim || EDGES.some(([k]) => s.trim[k] > 0);
   return (
-    <div className="section">
+    <div className="section" id="trim">
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <span className="label">Trim edges</span>
         {any && (

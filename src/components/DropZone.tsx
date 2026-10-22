@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState, type RefObject } from 'react';
 import { PASTE_KEY } from '../lib/files';
 import { drag } from '../lib/drag';
 
@@ -6,11 +6,12 @@ interface Props {
   flash: boolean;
   onFiles: (files: File[]) => void;
   onPasteClick: () => void;
+  /** Owned by App so the header's "PDF pages" link can open the same chooser. */
+  inputRef: RefObject<HTMLInputElement | null>;
 }
 
 // Dropping files is handled page-wide in App; this only shows the highlight.
-export function DropZone({ flash, onFiles, onPasteClick }: Props) {
-  const input = useRef<HTMLInputElement>(null);
+export function DropZone({ flash, onFiles, onPasteClick, inputRef: input }: Props) {
   const [over, setOver] = useState(false);
   const enter = (e: React.DragEvent) => {
     if (drag.id != null) return;
@@ -19,6 +20,7 @@ export function DropZone({ flash, onFiles, onPasteClick }: Props) {
   };
   return (
     <div
+      id="add"
       className={'drop' + (over || flash ? ' over' : '')}
       onDragEnter={enter}
       onDragOver={enter}

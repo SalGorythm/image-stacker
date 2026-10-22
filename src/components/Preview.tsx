@@ -38,7 +38,7 @@ export function Preview(p: Props) {
   }, [L, s.gapColor]);
 
   return (
-    <section className="panel preview" aria-label="Preview">
+    <section className="panel preview" id="export" aria-label="Preview">
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <span className="label">Preview</span>
         {multi && (

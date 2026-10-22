@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DropZone } from './components/DropZone';
 import { ImageList } from './components/ImageList';
+import { Help } from './components/Help';
 import { PagePicker } from './components/PagePicker';
+import { SiteFooter, SiteHeader, type NavItem } from './components/Site';
 import { Preview } from './components/Preview';
 import { GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
-import { useEvent, useToast } from './hooks';
+import { useEvent, useInstall, useToast } from './hooks';
 import { drag } from './lib/drag';
 import {
   fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles,
@@ -257,21 +259,58 @@ export default function App() {
     };
   }, [addFiles, onPaste, onKey]);
 
+  // Header and footer navigation: each link takes you to its tool and briefly highlights it
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [help, setHelp] = useState(false);
+  const { canInstall, install } = useInstall();
+  const goTo = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    el.classList.remove('spot');
+    void el.offsetWidth; // restart the highlight animation
+    el.classList.add('spot');
+  };
+  const nav: NavItem[] = [
+    { key: 'add', label: 'Add images', hint: 'Drop, choose or paste images', run: () => goTo('add') },
+    {
+      key: 'pdf', label: 'PDF pages', hint: 'Import chosen pages from a PDF',
+      run: () => {
+        const el = fileInput.current;
+        if (!el) return;
+        goTo('add');
+        el.accept = 'application/pdf,.pdf';
+        el.click();
+        setTimeout(() => { el.accept = 'image/*,application/pdf,.pdf'; }, 1000);
+      },
+    },
+    { key: 'groups', label: 'Groups', hint: 'Split into several stacks', run: () => goTo('groups') },
+    { key: 'trim', label: 'Trim', hint: 'Cut the edges of every image', run: () => goTo('trim') },
+    {
+      key: 'whatsapp', label: 'WhatsApp', hint: 'Keep stacks sharp after sending on WhatsApp',
+      run: () => { update({ quality: 'whatsapp' }); goTo('export'); show('WhatsApp quality is on. Each stack now fits WhatsApp HD.'); },
+    },
+    { key: 'export', label: canShareFiles ? 'Share' : 'Download', hint: 'Share, download or copy your stacks', run: () => goTo('export') },
+  ];
+  const onInstall = canInstall
+    ? async () => { if ((await install()) === 'ios') show('On iPhone or iPad: tap Share, then Add to Home Screen.', { keep: false }); }
+    : undefined;
+
   const n = list.length;
   return (
-    <div className="wrap">
-      {picking && <PagePicker info={picking.info} onDone={picking.done} />}
-      <header>
-        <h1>Image Stacker</h1>
-        <p>Add, order, stack, save. Images stay in your browser.</p>
-      </header>
+    <>
+    <SiteHeader nav={nav} onInstall={onInstall} onHelp={() => setHelp(true)} />
+    {picking && <PagePicker info={picking.info} onDone={picking.done} />}
+    {help && <Help onClose={() => setHelp(false)} />}
+    <main className="wrap">
+      <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 
       <div className="grid">
         <section className="panel" aria-label="Images and settings">
-          <DropZone flash={flash} onFiles={addFiles} onPasteClick={pasteClick} />
+          <DropZone flash={flash} onFiles={addFiles} onPasteClick={pasteClick} inputRef={fileInput} />
 
           {items.length > 0 && (
-            <div className="section">
+            <div className="section" id="order">
               <div className="row" style={{ justifyContent: 'space-between' }}>
                 <span className="label">Order · {items.length} image{items.length > 1 ? 's' : ''}</span>
                 <div className="row">
@@ -338,6 +377,8 @@ export default function App() {
           }}
         />
       </div>
-    </div>
+    </main>
+    <SiteFooter nav={nav} onInstall={onInstall} onHelp={() => setHelp(true)} />
+    </>
   );
 }

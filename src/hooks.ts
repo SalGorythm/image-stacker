@@ -1,10 +1,45 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /** Stable function identity that always calls the latest closure (for global listeners). */
 export function useEvent<A extends unknown[], R>(fn: (...a: A) => R) {
   const ref = useRef(fn);
   useLayoutEffect(() => { ref.current = fn; });
   return useCallback((...a: A) => ref.current(...a), []);
+}
+
+interface InstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+/**
+ * Install support: Chrome/Edge/Android hand over a prompt event; iPhone and iPad need
+ * the person to use Share → Add to Home Screen, so `install` returns 'ios' there.
+ */
+export function useInstall() {
+  const [evt, setEvt] = useState<InstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(
+    () => matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true,
+  );
+  useEffect(() => {
+    const offer = (e: Event) => { e.preventDefault(); setEvt(e as InstallPromptEvent); };
+    const done = () => { setInstalled(true); setEvt(null); };
+    window.addEventListener('beforeinstallprompt', offer);
+    window.addEventListener('appinstalled', done);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', offer);
+      window.removeEventListener('appinstalled', done);
+    };
+  }, []);
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const install = async (): Promise<'ios' | 'done'> => {
+    if (!evt) return 'ios';
+    await evt.prompt();
+    if ((await evt.userChoice).outcome === 'accepted') setInstalled(true);
+    setEvt(null);
+    return 'done';
+  };
+  return { canInstall: !installed && (!!evt || ios), install };
 }
 
 export interface ToastAction { label: string; fn: () => void }

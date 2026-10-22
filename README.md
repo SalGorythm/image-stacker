@@ -2,7 +2,16 @@
 
 Stack images or PDF pages into tall images, grids or side-by-side strips, split them into groups, and download or share them as PNG, JPG, ZIP or PDF. Everything runs in the browser, and images are kept in IndexedDB between visits.
 
-Features: PDF page picker, groups (every N / custom ranges), trim and automatic margin removal, captions with `{range}` placeholders, image numbers, watermark, blur/pixelate/box redaction, joining overlapping screenshots, WhatsApp-safe sizing, Instagram carousel slicing, HD/4K re-rendering of PDF pages, Web Share, installable offline app with an Android share target.
+Tools (all in the browser, nothing uploaded):
+
+- **Stacker**: stack images or PDF slides into tall images, grids or side-by-side strips; groups, trim, captions (Urdu/Arabic), numbering, watermark, blur with automatic detection of phone numbers and emails, screenshot joining, WhatsApp-safe sizing, Instagram carousel slicing, HD re-rendering of PDF pages.
+- **Fit to size**: exact KB window and pixel size for exam, bank and visa portals, with sourced presets.
+- **Scan**: phone photos of paper to clean, straightened pages and an A4 PDF under a size limit.
+- **Passport photo**: guided framing to country specs, background check, digital file and 6×4 print sheet.
+- **Signature**: clean ink on white or transparent, cropped.
+- **Cards**, **Quiz cards**, **QR codes**, **Watermark**, **Video** (before/after or slideshow MP4), **Copy text** (OCR), **Remove background**, **Safe to share** (location and metadata), **Convert** (HEIC/WebP/AVIF).
+
+Installable, offline after first load, Android share target. On-device engines are self-hosted and loaded only when needed: libheif (LGPL-3.0), Tesseract.js (Apache-2.0), U²-Net-p (Apache-2.0) on ONNX Runtime Web (MIT).
 
 ## Develop
 
@@ -10,7 +19,7 @@ Features: PDF page picker, groups (every N / custom ranges), trim and automatic 
 npm install
 npm run dev        # local dev server
 npm test           # unit tests (grouping, layout, file names)
-npm run build      # type-check and build to dist/
+npm run build      # type-check and build to dist/ (copies the OCR and ONNX runtimes into public/ first)
 ```
 
 ## Layout

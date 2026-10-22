@@ -11,6 +11,7 @@ import { ConvertTool } from './tools/ConvertTool';
 import { CutoutTool } from './tools/CutoutTool';
 import { PhotoTool } from './tools/PhotoTool';
 import { QrTool } from './tools/QrTool';
+import { QuizTool } from './tools/QuizTool';
 import { TextTool } from './tools/TextTool';
 import { VideoTool } from './tools/VideoTool';
 import { WatermarkTool } from './tools/WatermarkTool';
@@ -27,6 +28,7 @@ import {
 import { readMeta } from './lib/exif';
 import { normaliseFiles } from './lib/heic';
 import { computeGroups } from './lib/groups';
+import { handoff } from './lib/handoff';
 import { dropPdf, isDeck, isPdf, openPdf, pdfPages, type PdfInfo } from './lib/pdf';
 import { buildPdf, buildZip, canShareFiles, copyStack, saveBlob, shareFiles, stackFiles, TOO_BIG, zipFiles, type Stack } from './lib/render';
 import { loadItems, loadSettings, saveItems, saveSettings } from './lib/storage';
@@ -263,6 +265,13 @@ export default function App() {
   // Which tool is open; dropped and pasted files go to that tool
   const route = useRoute();
   const intake = useRef<((files: File[]) => void) | null>(null);
+  // Images another tool sends to the stacker (e.g. quiz cards) arrive when it opens
+  useEffect(() => {
+    if (route !== 'stack' || !ready || !handoff.files.length) return;
+    const got = handoff.files;
+    handoff.files = [];
+    addFiles(got);
+  }, [route, ready]);
   const take = useEvent((files: File[]) => (route !== 'stack' && intake.current ? intake.current(files) : addFiles(files)));
 
   // Page-wide: drop files anywhere, paste anywhere, ← / → to step through stacks
@@ -355,6 +364,7 @@ export default function App() {
   const tools: ToolLink[] = [
     T('stack', 'Stacker', 'Stack images and PDF slides into tall images, grids or carousels', 'Share'),
     T('cards', 'Cards', 'Verse, quote and announcement cards, Urdu and Arabic ready', 'Share'),
+    T('quiz', 'Quiz cards', 'Numbered question cards with the answers last', 'Share'),
     T('qr', 'QR codes', 'WhatsApp, WiFi and contact codes as posters, never expire', 'Share'),
     T('watermark', 'Watermark', 'Your logo or name on many photos at once', 'Share'),
     T('video', 'Video', 'Before/after reveal or slideshow as an MP4 for WhatsApp', 'Share'),
@@ -400,7 +410,8 @@ export default function App() {
       : route === 'text' ? <TextTool intakeRef={intake} toast={toast} show={show} />
       : route === 'watermark' ? <WatermarkTool intakeRef={intake} toast={toast} show={show} />
       : route === 'cutout' ? <CutoutTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'video' ? <VideoTool intakeRef={intake} toast={toast} show={show} /> : (
+      : route === 'video' ? <VideoTool intakeRef={intake} toast={toast} show={show} />
+      : route === 'quiz' ? <QuizTool toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

@@ -43,7 +43,7 @@ function star(x: CanvasRenderingContext2D, cx: number, cy: number, r: number, fi
   x.restore();
 }
 
-function decorate(x: CanvasRenderingContext2D, W: number, H: number, t: CardTemplate, p: Palette) {
+export function decorate(x: CanvasRenderingContext2D, W: number, H: number, t: CardTemplate, p: Palette) {
   const m = W * 0.045;
   if (t === 'paper' || t === 'night') {
     x.strokeStyle = p.line;

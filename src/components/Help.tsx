@@ -38,7 +38,12 @@ export function Help({ onClose }: Props) {
             </li>
           ))}
         </ol>
-        <p className="hint">Your images and settings are kept in this browser, so a reload doesn't lose them. Use Clear to remove them.</p>
+        <p className="hint">
+          <strong>More tools</strong> are under <strong>Tools</strong> at the top: fit a photo or signature to a form's size, scan paper to PDF, passport
+          photos, clean signatures, verse and quiz cards, QR codes, watermarks, background removal, short videos, copying text out of images,
+          removing hidden location data, and opening iPhone photos.
+        </p>
+        <p className="hint">Your images and settings are kept in this browser, so a reload doesn't lose them. Use Clear to remove them. Photos in Fit to size, Signature and Passport photo are never saved.</p>
         <p className="hint">
           <strong>On a Mac with the installed app:</strong> macOS may say Image Stacker "tried to access your data from other apps". That happens when a
           photo is dragged straight out of another app such as WhatsApp or Photos. Save it to Downloads or Desktop first, then add it, or allow

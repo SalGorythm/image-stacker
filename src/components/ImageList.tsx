@@ -61,7 +61,7 @@ export function ImageList({ items, tags, current, onMove, onRemove, onJump, onRe
             >
               {i + 1}
             </button>
-            <img alt="" src={it.url} />
+            <img alt="" src={it.thumb ?? it.url} loading="lazy" decoding="async" />
             <div className="meta">
               <div className="name" title={it.name}>{it.name}</div>
               <div className="dims">

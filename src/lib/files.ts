@@ -75,3 +75,20 @@ export async function takeSharedFiles(): Promise<File[]> {
   }
   return files;
 }
+
+/** A small JPEG of an image for list rows (2× the row's 56px for sharp screens). Falls back to the full image. */
+export async function makeThumb(img: HTMLImageElement | HTMLCanvasElement, fallback: string): Promise<string> {
+  try {
+    const W = img instanceof HTMLImageElement ? img.naturalWidth : img.width;
+    const H = img instanceof HTMLImageElement ? img.naturalHeight : img.height;
+    const k = Math.min(1, 160 / W);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(W * k));
+    c.height = Math.max(1, Math.round(H * k));
+    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+    const b = await new Promise<Blob | null>(r => c.toBlob(r, 'image/jpeg', 0.8));
+    return b ? URL.createObjectURL(b) : fallback;
+  } catch {
+    return fallback;
+  }
+}

@@ -47,7 +47,7 @@ export function saveItems(items: Item[], seq: number, pasteN: number) {
   } satisfies Saved);
 }
 
-export async function loadItems(loadImg: (url: string) => Promise<HTMLImageElement>) {
+export async function loadItems(loadImg: (url: string) => Promise<HTMLImageElement>, thumbOf: (img: HTMLImageElement, url: string) => Promise<string>) {
   const s = await get<Saved>('state');
   if (!s?.items?.length) return null;
   (s.docs || []).forEach(d => docs.set(d.id, { name: d.name, blob: d.blob }));
@@ -55,7 +55,8 @@ export async function loadItems(loadImg: (url: string) => Promise<HTMLImageEleme
   for (const r of s.items) {
     try {
       const url = URL.createObjectURL(r.blob);
-      items.push({ id: r.id, name: r.name, blob: r.blob, src: r.src, redact: r.redact, url, img: await loadImg(url) });
+      const img = await loadImg(url);
+      items.push({ id: r.id, name: r.name, blob: r.blob, src: r.src, redact: r.redact, url, img, thumb: await thumbOf(img, url) });
     } catch { /* skip unreadable */ }
   }
   return items.length ? { items, seq: s.seq || 0, pasteN: s.pasteN || 0 } : null;

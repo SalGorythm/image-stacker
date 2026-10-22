@@ -4,9 +4,10 @@ import { PASTE_KEY } from '../lib/files';
 const STEPS: [string, string][] = [
   ['Add images or a PDF', `Drop files anywhere, use Choose files, or press ${PASTE_KEY} to paste a screenshot. A PDF opens a page picker so you import only the slides you need.`],
   ['Put them in order', 'Drag rows, use the arrows, or tap a number to move an image to a position. Sort by file name if they arrive mixed up.'],
-  ['Split into stacks', 'Under Groups, choose Every N images (add more sizes with + Next) or type ranges like 1-4, 5-8. Each stack becomes one tall image.'],
-  ['Tidy the edges', 'Trim edges cuts the same amount off every image, or removes plain margins for you.'],
-  ['Send it', 'Pick WhatsApp quality so text stays sharp after sending, then Share, Download (one image, a ZIP, or a PDF), or Copy.'],
+  ['Split into stacks', 'Under Groups, choose Every N images (add more sizes with + Next) or type ranges like 1-4, 5-8. Each stack becomes one image.'],
+  ['Lay them out', 'Stack top to bottom, side by side, or in a grid. Turn on Join overlapping screenshots to stitch a long chat without repeats.'],
+  ['Tidy and label', 'Trim edges, add a caption such as "Answers {range}", number each image, or add a watermark. Use ◩ on a row to blur private details.'],
+  ['Send it', 'Pick WhatsApp quality so text stays sharp after sending, or cut stacks into Instagram slides. Then Share, Download (images, a ZIP, or a PDF), or Copy.'],
 ];
 
 interface Props {

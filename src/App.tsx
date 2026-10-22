@@ -10,7 +10,7 @@ import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './
 import { useEvent, useInstall, useToast } from './hooks';
 import { drag } from './lib/drag';
 import {
-  fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles,
+  fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles, makeThumb,
 } from './lib/files';
 import { computeGroups } from './lib/groups';
 import { dropPdf, isDeck, isPdf, openPdf, pdfPages, type PdfInfo } from './lib/pdf';
@@ -44,7 +44,7 @@ export default function App() {
 
   // Restore last session's images, or show the examples
   useEffect(() => {
-    loadItems(loadImg)
+    loadItems(loadImg, makeThumb)
       .catch(() => null)
       .then(r => {
         if (r) {
@@ -121,7 +121,7 @@ export default function App() {
         const img = await loadImg(url);
         let name = f.name;
         if (!name || /^image\.\w+$/.test(name)) name = `Pasted ${++pasteN}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
-        added.push({ id: ++seq, name, img, url, blob: f, src });
+        added.push({ id: ++seq, name, img, url, blob: f, src, thumb: await makeThumb(img, url) });
       } catch {
         show('Could not read ' + (f.name || 'that image'), { err: true });
       }
@@ -273,7 +273,14 @@ export default function App() {
 
   // Header and footer navigation: each link takes you to its tool and briefly highlights it
   const fileInput = useRef<HTMLInputElement>(null);
-  const [help, setHelp] = useState(false);
+  // The guide opens by itself on a first visit (not when files were shared into the app)
+  const [help, setHelp] = useState(() => {
+    try { return !localStorage.getItem('stacker-guide-seen') && !location.search.includes('shared'); } catch { return false; }
+  });
+  const closeHelp = () => {
+    setHelp(false);
+    try { localStorage.setItem('stacker-guide-seen', '1'); } catch { /* private mode */ }
+  };
   const [redacting, setRedacting] = useState<Item | null>(null);
   const { canInstall, install } = useInstall();
   const goTo = (id: string) => {
@@ -327,7 +334,7 @@ export default function App() {
     <>
     <SiteHeader nav={nav} onInstall={onInstall} onHelp={() => setHelp(true)} />
     {picking && <PagePicker info={picking.info} onDone={picking.done} />}
-    {help && <Help onClose={() => setHelp(false)} />}
+    {help && <Help onClose={closeHelp} />}
     {redacting && (
       <RedactEditor
         item={redacting}

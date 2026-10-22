@@ -57,13 +57,19 @@ const bands = (s: Settings) => {
   return { head: on && s.captionPos === 'top' ? CAPTION_RATIO : 0, foot: on && s.captionPos === 'bottom' ? CAPTION_RATIO : 0 };
 };
 
-export function stackLayout(list: Item[], s: Settings, hq: boolean): StackLayout | null {
+/** The on-screen preview never needs more pixels than this; exports use the full size. */
+export const PREVIEW_LIMITS = { maxSide: 12000, maxArea: 6e6 };
+
+/** Gives the browser a moment to paint progress and handle taps between heavy steps. */
+const breathe = () => new Promise(r => setTimeout(r, 0));
+
+export function stackLayout(list: Item[], s: Settings, hq: boolean, limits = CANVAS_LIMITS): StackLayout | null {
   const P = prepare(list, s);
   const L = layout(P.idx, P.size, {
     gap: s.gap,
     width: s.width,
     q: hq ? QUALITY_WIDTH[s.quality] : 0,
-    ...CANVAS_LIMITS,
+    ...limits,
     box: hq && s.quality === 'whatsapp' ? WHATSAPP_BOX : undefined,
     ...bands(s),
     joined: P.joined,
@@ -235,6 +241,7 @@ export async function buildPdf(stacks: Stack[], s: Settings, progress?: (i: numb
   let pdf: InstanceType<typeof jsPDF> | undefined;
   for (let i = 0; i < stacks.length; i++) {
     progress?.(i);
+    await breathe();
     for (const c of await renderPieces(stacks[i], s)) {
       const blob = await canvasBlob(c, 'image/jpeg', 0.95);
       if (!blob) throw new Error(TOO_BIG);
@@ -260,6 +267,7 @@ export async function buildZip(files: { name: string; stack: Stack }[], s: Setti
   const all: { name: string; blob: Blob }[] = [];
   for (let i = 0; i < files.length; i++) {
     progress?.(i);
+    await breathe();
     all.push(...(await stackFiles(files[i].stack, s, files[i].name)));
   }
   return zipFiles(all);
@@ -292,6 +300,7 @@ export async function shareFiles(stacks: Stack[], names: string[], pdfName: stri
   const files: File[] = [];
   for (let i = 0; i < stacks.length; i++) {
     progress?.(i);
+    await breathe();
     for (const f of await stackFiles(stacks[i], s, names[i])) files.push(new File([f.blob], f.name, { type: f.blob.type }));
   }
   return files;

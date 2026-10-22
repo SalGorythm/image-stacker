@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { SLIDE } from '../lib/carousel';
-import { paint, slicesOf, stackAdvice, stackLayout } from '../lib/render';
+import { paint, PREVIEW_LIMITS, slicesOf, stackAdvice, stackLayout } from '../lib/render';
 import type { StackMeta } from '../lib/captions';
 import type { Format, Item, Quality, Settings } from '../lib/types';
 import type { ToastState } from '../hooks';
@@ -34,7 +34,7 @@ export function Preview(p: Props) {
 
   // Preview uses stored images; the size label shows what the export will be at the chosen quality
   const capOn = s.caption.trim() !== '';
-  const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap, s.arrange, s.columns]);
+  const L = useMemo(() => stackLayout(list, s, false, PREVIEW_LIMITS), [list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap, s.arrange, s.columns]);
   const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap, s.arrange, s.columns]);
   const wa = s.quality === 'whatsapp';
   const slides = useMemo(() => (E && s.slice !== 'off' ? slicesOf(E, s)?.cuts.length ?? 0 : 0), [E, s.slice, s.sliceWhole, s.arrange]);

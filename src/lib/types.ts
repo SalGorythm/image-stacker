@@ -18,6 +18,8 @@ export interface Item {
   src?: PdfSrc;
   /** Areas hidden with blur, pixelate or a solid box. */
   redact?: Redaction[];
+  /** Small copy for the image list, so long lists don't decode every full-size image. */
+  thumb?: string;
 }
 
 export type WidthMode = 'widest' | 'narrowest' | 'original';

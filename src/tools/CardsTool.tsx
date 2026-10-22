@@ -12,21 +12,21 @@ interface Props {
 
 const KEY = 'cards-draft';
 const EXAMPLE: Card = {
-  text: 'محنت کامیابی کی کنجی ہے',
-  sub: 'Hard work is the key to success',
+  text: 'Small steps every day add up to big results.',
+  sub: 'Keep going',
   footer: 'Your name or group',
   template: 'paper',
   size: 'status',
   font: 'auto',
 };
 
-/** The example text earlier versions saved as a draft; replaced by the current example. */
-const OLD_EXAMPLE = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
+/** Example texts earlier versions saved as a draft; replaced by the current example. */
+const OLD_EXAMPLES = ['بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', 'محنت کامیابی کی کنجی ہے'];
 
 function load(): Card {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
-    if (saved.text === OLD_EXAMPLE) { delete saved.text; delete saved.sub; delete saved.footer; }
+    if (OLD_EXAMPLES.includes(saved.text)) { delete saved.text; delete saved.sub; delete saved.footer; }
     return { ...EXAMPLE, ...saved };
   } catch { return EXAMPLE; }
 }

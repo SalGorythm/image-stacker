@@ -16,7 +16,7 @@ interface Props {
 interface Draft { text: string; title: string; footer: string; order: QuizOrder; template: CardTemplate; size: CardSize }
 const KEY = 'quiz-draft';
 const EXAMPLE: Draft = {
-  text: 'Q: What is the largest planet in our solar system?\nA: Jupiter\n\nQ: How many continents are there?\nA: Seven\n\nسوال: پانی کس درجہ حرارت پر ابلتا ہے؟\nجواب: 100 ڈگری سینٹی گریڈ',
+  text: 'Q: What is the largest planet in our solar system?\nA: Jupiter\n\nQ: How many continents are there?\nA: Seven\n\nQ: At what temperature does water boil?\nA: 100 °C (212 °F) at sea level',
   title: 'General knowledge, Part 1', footer: 'Weekly class quiz', order: 'end', template: 'paper', size: 'post',
 };
 
@@ -26,7 +26,7 @@ export function QuizTool({ toast, show }: Props) {
     try {
       const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
       // Earlier versions saved their example as a draft; show the current example instead
-      if (typeof saved.text === 'string' && saved.text.startsWith('Q: Surah Al-Takathur')) { delete saved.text; delete saved.title; delete saved.footer; }
+      if (typeof saved.text === 'string' && (saved.text.startsWith('Q: Surah Al-Takathur') || saved.text.includes('سوال: پانی کس درجہ'))) { delete saved.text; delete saved.title; delete saved.footer; }
       return { ...EXAMPLE, ...saved };
     } catch { return EXAMPLE; }
   });

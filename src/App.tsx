@@ -349,19 +349,21 @@ export default function App() {
     },
     { key: 'export', label: canShareFiles ? 'Share' : 'Download', hint: 'Share, download or copy your stacks', run: () => goTo('export') },
   ];
+  const T = (key: string, label: string, hint: string, group: ToolLink['group']): ToolLink =>
+    ({ key, label, hint, group, href: key === 'stack' ? '#/' : `#/${key}`, active: route === key });
   const tools: ToolLink[] = [
-    { key: 'stack', label: 'Stacker', href: '#/', active: route === 'stack' },
-    { key: 'fit', label: 'Fit to size', href: '#/fit', active: route === 'fit' },
-    { key: 'scan', label: 'Scan', href: '#/scan', active: route === 'scan' },
-    { key: 'photo', label: 'Passport photo', href: '#/photo', active: route === 'photo' },
-    { key: 'signature', label: 'Signature', href: '#/signature', active: route === 'signature' },
-    { key: 'safe', label: 'Safe to share', href: '#/safe', active: route === 'safe' },
-    { key: 'cards', label: 'Cards', href: '#/cards', active: route === 'cards' },
-    { key: 'qr', label: 'QR codes', href: '#/qr', active: route === 'qr' },
-    { key: 'text', label: 'Copy text', href: '#/text', active: route === 'text' },
-    { key: 'watermark', label: 'Watermark', href: '#/watermark', active: route === 'watermark' },
-    { key: 'cutout', label: 'Remove background', href: '#/cutout', active: route === 'cutout' },
-    { key: 'convert', label: 'Convert', href: '#/convert', active: route === 'convert' },
+    T('stack', 'Stacker', 'Stack images and PDF slides into tall images, grids or carousels', 'Share'),
+    T('cards', 'Cards', 'Verse, quote and announcement cards, Urdu and Arabic ready', 'Share'),
+    T('qr', 'QR codes', 'WhatsApp, WiFi and contact codes as posters, never expire', 'Share'),
+    T('watermark', 'Watermark', 'Your logo or name on many photos at once', 'Share'),
+    T('fit', 'Fit to size', 'Exact KB and pixels for exam, bank and visa forms', 'Forms and documents'),
+    T('scan', 'Scan', 'Phone photos of paper into a clean PDF under a size limit', 'Forms and documents'),
+    T('photo', 'Passport photo', 'Frame to country rules, digital file and print sheet', 'Forms and documents'),
+    T('signature', 'Signature', 'Clean signature on white or transparent', 'Forms and documents'),
+    T('text', 'Copy text', 'Get the text out of photos and screenshots', 'Forms and documents'),
+    T('cutout', 'Remove background', 'People and products on white, colour or transparent', 'Photos'),
+    T('safe', 'Safe to share', 'See and remove hidden location and phone details', 'Photos'),
+    T('convert', 'Convert', 'HEIC, WebP and AVIF to JPG or PNG', 'Photos'),
   ];
   const onInstall = canInstall
     ? async () => { if ((await install()) === 'ios') show('On iPhone or iPad: tap Share, then Add to Home Screen.', { keep: false }); }

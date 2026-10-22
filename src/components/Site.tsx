@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react';
+
 export interface NavItem {
   key: string;
   label: string;
@@ -8,8 +10,54 @@ export interface NavItem {
 export interface ToolLink {
   key: string;
   label: string;
+  hint: string;
+  group: 'Share' | 'Forms and documents' | 'Photos';
   href: string;
   active: boolean;
+}
+
+const GROUPS: ToolLink['group'][] = ['Share', 'Forms and documents', 'Photos'];
+
+/** All tools in one menu, grouped, each with what it does. Closes on choice, Escape or a click outside. */
+function ToolsMenu({ tools }: { tools: ToolLink[] }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  useEffect(() => {
+    const close = () => setOpen(false);
+    window.addEventListener('hashchange', close);
+    return () => window.removeEventListener('hashchange', close);
+  }, []);
+  const current = tools.find(t => t.active && t.key !== 'stack');
+  return (
+    <div className="tools-menu" ref={box}>
+      <button className={'tool-link' + (current ? ' on' : '')} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen(o => !o)}>
+        {current ? current.label : 'Tools'} <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="tools-panel" role="menu">
+          {GROUPS.map(g => (
+            <div key={g} className="tools-group">
+              <span className="label">{g}</span>
+              {tools.filter(t => t.group === g).map(t => (
+                <a key={t.key} role="menuitem" href={t.href} className={'tools-item' + (t.active ? ' on' : '')} onClick={() => setOpen(false)}>
+                  <strong>{t.label}</strong>
+                  <span>{t.hint}</span>
+                </a>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface Props {
@@ -53,11 +101,8 @@ export function SiteHeader({ tools, sections, showSections, onInstall, onHelp }:
           <span>Image Stacker</span>
         </a>
         <nav className="tools" aria-label="Tools">
-          {tools.map(t => (
-            <a key={t.key} href={t.href} className={'tool-link' + (t.active ? ' on' : '')} aria-current={t.active ? 'page' : undefined}>
-              {t.label}
-            </a>
-          ))}
+          <a href="#/" className={'tool-link' + (tools[0]?.active ? ' on' : '')} aria-current={tools[0]?.active ? 'page' : undefined}>Stacker</a>
+          <ToolsMenu tools={tools} />
         </nav>
         <div className="head-actions">
           <button className="btn sm" onClick={onHelp}>How it works</button>

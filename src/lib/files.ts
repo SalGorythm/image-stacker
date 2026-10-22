@@ -92,3 +92,27 @@ export async function makeThumb(img: HTMLImageElement | HTMLCanvasElement, fallb
     return fallback;
   }
 }
+
+/**
+ * macOS blocks an installed web app from reading files kept inside other apps (WhatsApp Desktop,
+ * Photos, Mail). The file still arrives but can't be read, so check before using it and explain.
+ */
+let onBlocked: (names: string[]) => void = () => {};
+export const setBlockedHandler = (fn: (names: string[]) => void) => { onBlocked = fn; };
+
+export const blockedMessage = (names: string[]) =>
+  `Couldn't read ${names.length === 1 ? names[0] : `${names.length} files`}. On a Mac, the installed app can't open files kept inside other apps such as WhatsApp or Photos. Save it to Downloads or Desktop first and add it from there, or use Image Stacker in the browser.`;
+
+/** Keeps only the files this app is allowed to read, reporting the rest once. */
+export async function readableOnly(files: File[]): Promise<File[]> {
+  const ok: File[] = [], blocked: string[] = [];
+  for (const f of files) {
+    try { await f.slice(0, 16).arrayBuffer(); ok.push(f); } catch { blocked.push(f.name || 'that file'); }
+  }
+  if (blocked.length) onBlocked(blocked);
+  return ok;
+}
+
+/** One message for a file that won't open, covering the Mac installed-app case where macOS blocks it. */
+export const cantOpen = (name: string) =>
+  `Couldn't open ${name || 'that file'}. If it came from another app (WhatsApp, Photos, Mail) on a Mac, save it to Downloads or Desktop first and add it from there: macOS blocks the installed app from other apps' files.`;

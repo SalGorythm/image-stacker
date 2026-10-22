@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
 import { kb } from '../lib/fitImage';
-import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
+import { loadImg, NO_IMAGE, PASTE_KEY, readableOnly, readClipboardImages, cantOpen } from '../lib/files';
 import { heicToJpeg, isHeic, isImageFile } from '../lib/heic';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
 
@@ -30,7 +30,7 @@ export function ConvertTool({ intakeRef, toast, show }: Props) {
   const input = useRef<HTMLInputElement>(null);
 
   const add = async (files: File[]) => {
-    const imgs = files.filter(isImageFile);
+    const imgs = (await readableOnly(files)).filter(isImageFile);
     if (!imgs.length) return show('Add photos or images (HEIC, WebP, AVIF, PNG, JPG).', { err: true });
     const out: Entry[] = [];
     for (const f of imgs) {
@@ -39,7 +39,7 @@ export function ConvertTool({ intakeRef, toast, show }: Props) {
         if (isHeic(f)) { show(`Opening ${f.name}…`, { keep: true }); src = await heicToJpeg(f); }
         const url = URL.createObjectURL(src);
         out.push({ id: ++seq, name: f.name || `image-${seq}`, from: kind(f), img: await loadImg(url), url });
-      } catch { show(`Could not open ${f.name || 'that file'}. This browser may not read that format.`, { err: true }); }
+      } catch { show(cantOpen(f.name), { err: true }); }
     }
     if (out.length) { setEntries(p => [...p, ...out]); show(`Added ${out.length} image${out.length > 1 ? 's' : ''}.`); }
   };

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
 import { fitImage, kb, type FitResult } from '../lib/fitImage';
-import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
+import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages, cantOpen } from '../lib/files';
 import { normaliseFiles } from '../lib/heic';
 import { backgroundCheck, coverView, guides, ID_SPECS, placeFace, printSheet, type IdSpec, type View } from '../lib/idphoto';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
@@ -77,7 +77,7 @@ export function PhotoTool({ intakeRef, toast, show }: Props) {
       setView(coverView(c.width, c.height, spec));
       const placed = await autoPlace(c, spec);
       show(placed ? 'Face found and placed. Check it sits between the guides.' : 'Drag and zoom so the top of the head touches the top line and the chin sits in the green band.');
-    } catch { show(`Could not open ${f.name}.`, { err: true }); }
+    } catch { show(cantOpen(f.name), { err: true }); }
     finally { URL.revokeObjectURL(url); }
   };
   useEffect(() => {

@@ -4,7 +4,7 @@ import type { ToastOptions, ToastState } from '../hooks';
 import { readMeta, stripMeta, type PhotoMeta } from '../lib/exif';
 import { kb } from '../lib/fitImage';
 import { heicToJpeg, isHeic, isImageFile } from '../lib/heic';
-import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
+import { loadImg, NO_IMAGE, PASTE_KEY, readableOnly, readClipboardImages, cantOpen } from '../lib/files';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
 
 interface Props {
@@ -58,7 +58,7 @@ export function SafeTool({ intakeRef, toast, show }: Props) {
   const input = useRef<HTMLInputElement>(null);
 
   const add = async (files: File[]) => {
-    const imgs = files.filter(isImageFile);
+    const imgs = (await readableOnly(files)).filter(isImageFile);
     if (!imgs.length) return show('Add photos (JPG, PNG, HEIC, WebP).', { err: true });
     const out: Entry[] = [];
     for (const f of imgs) {
@@ -74,7 +74,7 @@ export function SafeTool({ intakeRef, toast, show }: Props) {
         const meta = readMeta(new Uint8Array(await f.slice(0, 512 * 1024).arrayBuffer()));
         const { clean, resaved } = await cleanCopy(f, meta);
         out.push({ id: ++seq, file: f, thumb: URL.createObjectURL(f), meta, clean, resaved, heic: false });
-      } catch { show(`Could not read ${f.name || 'that photo'}.`, { err: true }); }
+      } catch { show(cantOpen(f.name), { err: true }); }
     }
     setEntries(prev => [...prev, ...out]);
     const located = out.filter(e => e.meta.gps).length;

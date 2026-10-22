@@ -39,6 +39,11 @@ export function Help({ onClose }: Props) {
           ))}
         </ol>
         <p className="hint">Your images and settings are kept in this browser, so a reload doesn't lose them. Use Clear to remove them.</p>
+        <p className="hint">
+          <strong>On a Mac with the installed app:</strong> macOS may say Image Stacker "tried to access your data from other apps". That happens when a
+          photo is dragged straight out of another app such as WhatsApp or Photos. Save it to Downloads or Desktop first, then add it, or allow
+          Image Stacker in System Settings → Privacy &amp; Security.
+        </p>
         <div className="row picker-foot">
           <button ref={close} className="btn primary" onClick={onClose}>Got it</button>
         </div>

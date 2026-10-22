@@ -1,4 +1,4 @@
-import { loadImg } from './files';
+import { loadImg, readableOnly } from './files';
 
 export const isHeic = (f: File) => /image\/hei[cf]/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
 
@@ -47,7 +47,8 @@ export async function heicToJpeg(f: File): Promise<File> {
  * Prepares dropped or chosen files for any tool: HEIC becomes JPG (others pass through).
  * `progress` reports each HEIC being opened, since big iPhone photos take a moment.
  */
-export async function normaliseFiles(files: File[], progress?: (name: string) => void, failed?: (name: string) => void) {
+export async function normaliseFiles(incoming: File[], progress?: (name: string) => void, failed?: (name: string) => void) {
+  const files = await readableOnly(incoming);
   const out: File[] = [];
   for (const f of files) {
     if (!isHeic(f)) { out.push(f); continue; }

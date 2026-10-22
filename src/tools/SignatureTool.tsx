@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
-import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
+import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages, cantOpen } from '../lib/files';
 import { handoff } from '../lib/handoff';
 import { normaliseFiles } from '../lib/heic';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
@@ -33,7 +33,7 @@ export function SignatureTool({ intakeRef, toast, show }: Props) {
   const input = useRef<HTMLInputElement>(null);
 
   const add = async (incoming: File[]) => {
-    const files = await normaliseFiles(incoming.slice(0, 1), n => show(`Opening ${n}…`, { keep: true }), n => show(`Could not open ${n}.`, { err: true }));
+    const files = await normaliseFiles(incoming.slice(0, 1), n => show(`Opening ${n}…`, { keep: true }), n => show(cantOpen(n), { err: true }));
     if (incoming.length > 1) files.push(...incoming.slice(1));
     const f = files.find(x => x.type.startsWith('image/'));
     if (!f) return show('Add a photo of the signature (JPG or PNG).', { err: true });
@@ -48,7 +48,7 @@ export function SignatureTool({ intakeRef, toast, show }: Props) {
       setSrc(c);
       setName((f.name || 'signature').replace(/\.[^.]+$/, ''));
       if (files.length > 1) show('Signature works on one photo at a time; the first one is shown.');
-    } catch { show(`Could not open ${f.name || 'that image'}.`, { err: true }); }
+    } catch { show(cantOpen(f.name), { err: true }); }
     finally { URL.revokeObjectURL(url); }
   };
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
 import { kb } from '../lib/fitImage';
-import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
+import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages, cantOpen } from '../lib/files';
 import { normaliseFiles } from '../lib/heic';
 import { pagesToPdf } from '../lib/pdfOut';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
@@ -101,7 +101,7 @@ export function ScanTool({ intakeRef, toast, show }: Props) {
       try {
         const src = toCanvas(await loadImg(url));
         out.push({ id: ++seq, name: f.name, src, ...detect(src) });
-      } catch { show(`Could not open ${f.name}.`, { err: true }); }
+      } catch { show(cantOpen(f.name), { err: true }); }
       finally { URL.revokeObjectURL(url); }
     }
     setPages(p => { setSel(p.length); return [...p, ...out]; });

@@ -3,7 +3,7 @@ import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
 import type { FitSpec } from '../lib/fit';
 import { fitImage, kb, type FitResult } from '../lib/fitImage';
-import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
+import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages, cantOpen } from '../lib/files';
 import { handoff } from '../lib/handoff';
 import { normaliseFiles } from '../lib/heic';
 import { PRESETS } from '../lib/presets';
@@ -57,14 +57,14 @@ export function FitTool({ intakeRef, toast, show }: Props) {
   }, [spec, preset]);
 
   const add = async (incoming: File[]) => {
-    const list = await normaliseFiles(incoming, n => show(`Opening ${n}…`, { keep: true }), n => show(`Could not open ${n}.`, { err: true }));
+    const list = await normaliseFiles(incoming, n => show(`Opening ${n}…`, { keep: true }), n => show(cantOpen(n), { err: true }));
     const imgs = list.filter(f => f.type.startsWith('image/'));
     if (!imgs.length) return show('Those files are not images. Fit to size works on photos and scans (JPG, PNG, WebP).', { err: true });
     const out: Source[] = [];
     for (const f of imgs) {
       const url = URL.createObjectURL(f);
       try { out.push({ id: ++seq, name: f.name || `photo-${seq}.jpg`, img: await loadImg(url), url }); }
-      catch { URL.revokeObjectURL(url); show(`Could not open ${f.name || 'that image'}.`, { err: true }); }
+      catch { URL.revokeObjectURL(url); show(cantOpen(f.name), { err: true }); }
     }
     if (out.length) setFiles(prev => [...prev, ...out]);
   };

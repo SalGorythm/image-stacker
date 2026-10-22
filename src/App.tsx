@@ -17,7 +17,7 @@ import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './
 import { useEvent, useInstall, useRoute, useToast } from './hooks';
 import { drag } from './lib/drag';
 import {
-  fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles, makeThumb,
+  fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles, makeThumb, setBlockedHandler, blockedMessage, cantOpen,
 } from './lib/files';
 import { readMeta } from './lib/exif';
 import { normaliseFiles } from './lib/heic';
@@ -48,6 +48,8 @@ export default function App() {
   const [flash, setFlash] = useState(false);
   const [busy, setBusy] = useState(false);
   const { toast, show } = useToast();
+  // Files macOS won't let the installed app read get one clear explanation, whichever tool is open
+  useEffect(() => setBlockedHandler(names => show(blockedMessage(names), { err: true })), [show]);
   // Samples have no blob: they are never saved and disappear when real images arrive
   const isSample = items.length > 0 && !items[0].blob;
 
@@ -105,7 +107,7 @@ export default function App() {
     new Promise<number[] | null>(resolve => setPicking({ info, done: pages => { setPicking(null); resolve(pages); } }));
 
   const addFiles = useEvent(async (incoming: File[]) => {
-    const files = await normaliseFiles(incoming, n => show(`Opening ${n}…`, { keep: true }), n => show(`Could not open ${n}. Is it a valid photo?`, { err: true }));
+    const files = await normaliseFiles(incoming, n => show(`Opening ${n}…`, { keep: true }), n => show(cantOpen(n), { err: true }));
     const queue: { file: File; src?: PdfSrc }[] = [];
     for (const f of files) {
       if (isPdf(f)) {
@@ -115,7 +117,7 @@ export default function App() {
           if (!pages) { dropPdf(info.id); continue; }
           queue.push(...(await pdfPages(info, pages, (n, t) => show(`Reading ${f.name}: page ${n} of ${t}…`, { keep: true }))));
         } catch {
-          show(`Could not read ${f.name}. Is it a valid PDF?`, { err: true });
+          show(cantOpen(f.name), { err: true });
         }
       } else if (f.type.startsWith('image/')) queue.push({ file: f });
     }
@@ -134,7 +136,7 @@ export default function App() {
         const located = !!readMeta(new Uint8Array(await f.slice(0, 512 * 1024).arrayBuffer())).gps;
         added.push({ id: ++seq, name, img, url, blob: f, src, thumb: await makeThumb(img, url), located });
       } catch {
-        show('Could not read ' + (f.name || 'that image'), { err: true });
+        show(cantOpen(f.name), { err: true });
       }
     }
     if (!added.length) return;

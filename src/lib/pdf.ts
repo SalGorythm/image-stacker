@@ -49,29 +49,55 @@ export async function renderPage(src: PdfSrc, width: number): Promise<HTMLCanvas
 export const isPdf = (f: File) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
 export const isDeck = (f: File) => /\.(pptx?|key|odp)$/i.test(f.name);
 
-/** Turns each page into a PNG file at preview size, keeping a link back to the PDF. */
-export async function pdfPages(f: File, progress: (n: number, total: number) => void) {
+export interface PdfInfo {
+  id: string;
+  name: string;
+  numPages: number;
+}
+
+/** Opens a PDF and registers it, without rendering anything yet. */
+export async function openPdf(f: File): Promise<PdfInfo> {
   const id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   docs.set(id, { name: f.name, blob: f });
-  let doc: PDFDocumentProxy;
   try {
-    doc = await openDoc(id);
+    const doc = await openDoc(id);
+    return { id, name: f.name, numPages: doc.numPages };
   } catch (e) {
     docs.delete(id);
     throw e;
   }
-  const base = f.name.replace(/\.pdf$/i, '');
-  const pad = String(doc.numPages).length;
+}
+
+/** Forgets a PDF that was opened but not imported. */
+export function dropPdf(id: string) {
+  docCache.get(id)?.then(d => d.loadingTask.destroy()).catch(() => {});
+  docCache.delete(id);
+  docs.delete(id);
+}
+
+/** A small JPEG of one page for the page picker. */
+export async function thumbnail(id: string, page: number, width = 200) {
+  const c = await renderPage({ doc: id, page }, width);
+  const url = c.toDataURL('image/jpeg', 0.8);
+  c.width = c.height = 0;
+  return url;
+}
+
+/** Turns the chosen pages into PNG files at preview size, each keeping a link back to the PDF. */
+export async function pdfPages(info: PdfInfo, pages: number[], progress: (i: number, total: number) => void) {
+  const base = info.name.replace(/\.pdf$/i, '');
+  const pad = String(info.numPages).length;
   const out: { file: File; src: PdfSrc }[] = [];
-  for (let n = 1; n <= doc.numPages; n++) {
-    progress(n, doc.numPages);
-    const c = await renderPage({ doc: id, page: n }, PREVIEW_W);
+  for (let i = 0; i < pages.length; i++) {
+    const n = pages[i];
+    progress(i + 1, pages.length);
+    const c = await renderPage({ doc: info.id, page: n }, PREVIEW_W);
     const blob = await new Promise<Blob | null>(r => c.toBlob(r, 'image/png'));
     c.width = c.height = 0;
     if (!blob) continue;
     out.push({
       file: new File([blob], `${base} - ${String(n).padStart(pad, '0')}.png`, { type: 'image/png' }),
-      src: { doc: id, page: n },
+      src: { doc: info.id, page: n },
     });
   }
   return out;

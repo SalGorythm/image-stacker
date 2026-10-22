@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DropZone } from './components/DropZone';
 import { ImageList } from './components/ImageList';
+import { PagePicker } from './components/PagePicker';
 import { Preview } from './components/Preview';
 import { GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
 import { useEvent, useToast } from './hooks';
@@ -9,7 +10,7 @@ import {
   fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles,
 } from './lib/files';
 import { computeGroups } from './lib/groups';
-import { isDeck, isPdf, pdfPages } from './lib/pdf';
+import { dropPdf, isDeck, isPdf, openPdf, pdfPages, type PdfInfo } from './lib/pdf';
 import { buildPdf, buildZip, canShareFiles, copyStack, imageBlob, saveBlob, shareFiles, TOO_BIG } from './lib/render';
 import { loadItems, loadSettings, saveItems, saveSettings } from './lib/storage';
 import type { Item, PdfSrc, Settings } from './lib/types';
@@ -80,12 +81,20 @@ export default function App() {
   }, [groups, multi]);
   const current = useMemo(() => new Set(multi ? list.map(it => it.id) : []), [list, multi]);
 
+  // PDFs with more than one page open the page picker; it resolves with the chosen pages or null
+  const [picking, setPicking] = useState<{ info: PdfInfo; done: (pages: number[] | null) => void } | null>(null);
+  const askPages = (info: PdfInfo) =>
+    new Promise<number[] | null>(resolve => setPicking({ info, done: pages => { setPicking(null); resolve(pages); } }));
+
   const addFiles = useEvent(async (files: File[]) => {
     const queue: { file: File; src?: PdfSrc }[] = [];
     for (const f of files) {
       if (isPdf(f)) {
         try {
-          queue.push(...(await pdfPages(f, (n, t) => show(`Reading ${f.name}: page ${n} of ${t}…`, { keep: true }))));
+          const info = await openPdf(f);
+          const pages = info.numPages > 1 ? await askPages(info) : [1];
+          if (!pages) { dropPdf(info.id); continue; }
+          queue.push(...(await pdfPages(info, pages, (n, t) => show(`Reading ${f.name}: page ${n} of ${t}…`, { keep: true }))));
         } catch {
           show(`Could not read ${f.name}. Is it a valid PDF?`, { err: true });
         }
@@ -251,6 +260,7 @@ export default function App() {
   const n = list.length;
   return (
     <div className="wrap">
+      {picking && <PagePicker info={picking.info} onDone={picking.done} />}
       <header>
         <h1>Image Stacker</h1>
         <p>Add, order, stack, save. Images stay in your browser.</p>

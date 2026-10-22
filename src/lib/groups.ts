@@ -71,3 +71,22 @@ export function computeGroups<T>(items: T[], o: GroupOptions): { groups: Group<T
   if (o.mode !== 'all' && groups.length > 1 && !info) info = `${n} images → ${groups.length} stacked images.`;
   return { groups, info };
 }
+
+/** Writes sorted page numbers back as ranges: [1,2,3,5,7,8] → "1-3, 5, 7-8". */
+export function toRanges(nums: number[]): string {
+  const out: string[] = [];
+  const sorted = [...new Set(nums)].sort((a, b) => a - b);
+  for (let i = 0; i < sorted.length; i++) {
+    const a = sorted[i];
+    while (i + 1 < sorted.length && sorted[i + 1] === sorted[i] + 1) i++;
+    out.push(a === sorted[i] ? String(a) : `${a}-${sorted[i]}`);
+  }
+  return out.join(', ');
+}
+
+/** Page numbers named by a ranges string, in page order, without repeats. */
+export function pagesFrom(text: string, n: number): number[] {
+  const set = new Set<number>();
+  for (const [a, b] of parseRanges(text, n).out) for (let i = a; i <= b; i++) set.add(i);
+  return [...set].sort((a, b) => a - b);
+}

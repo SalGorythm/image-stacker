@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeGroups, parseRanges, readSizes, type GroupOptions } from './groups';
+import { computeGroups, pagesFrom, parseRanges, readSizes, toRanges, type GroupOptions } from './groups';
 
 const items = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
 const labels = (n: number, o: Partial<GroupOptions>) =>
@@ -37,4 +37,10 @@ describe('all', () => {
     expect(labels(5, { mode: 'all' })).toEqual(['1-5']);
     expect(labels(0, { mode: 'all' })).toEqual([]);
   });
+});
+
+describe('page selection text', () => {
+  it('writes pages as ranges', () => expect(toRanges([7, 1, 2, 3, 5, 8])).toBe('1-3, 5, 7-8'));
+  it('reads ranges back into pages', () => expect(pagesFrom('3-5, 1, 4, 40', 10)).toEqual([1, 3, 4, 5]));
+  it('round-trips', () => expect(pagesFrom(toRanges([2, 3, 4, 9]), 10)).toEqual([2, 3, 4, 9]));
 });

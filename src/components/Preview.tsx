@@ -17,6 +17,8 @@ interface Props {
   onSave: () => void;
   onSaveAll: () => void;
   onCopy: () => void;
+  /** Present only where the browser can share files. */
+  onShare?: (all: boolean) => void;
   /** Re-split everything into stacks of this many images. */
   onSplit: (perStack: number) => void;
 }
@@ -99,11 +101,19 @@ export function Preview(p: Props) {
         <button className={'btn' + (multi ? '' : ' primary')} disabled={!L || p.busy} onClick={p.onSave}>
           {multi ? 'Download this one' : 'Download'}
         </button>
+        {p.onShare && (
+          <button className="btn" disabled={!L || p.busy} onClick={() => p.onShare!(false)}>
+            {multi ? 'Share this one' : 'Share'}
+          </button>
+        )}
         <button className="btn" disabled={!L || p.busy} onClick={p.onCopy}>Copy</button>
         {multi && (
           <button className="btn primary" disabled={p.busy} onClick={p.onSaveAll}>
             Download all {count} ({s.fmt === 'pdf' ? 'PDF' : 'ZIP'})
           </button>
+        )}
+        {multi && p.onShare && (
+          <button className="btn" disabled={p.busy} onClick={() => p.onShare!(true)}>Share all {count}</button>
         )}
       </div>
       <div className={'toast' + (p.toast?.err ? ' err' : '')} role="status">

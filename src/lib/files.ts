@@ -58,3 +58,20 @@ export function makeSample(n: number) {
   x.fillStyle = '#666'; x.font = '28px sans-serif'; x.fillText('Replace with your own images', 616, 400);
   return c;
 }
+
+/** Files the service worker parked after another app shared them into the installed app. */
+export async function takeSharedFiles(): Promise<File[]> {
+  if (!new URLSearchParams(location.search).has('shared') || !('caches' in window)) return [];
+  history.replaceState(null, '', location.pathname);
+  const cache = await caches.open('shared-files');
+  const files: File[] = [];
+  for (const req of await cache.keys()) {
+    const res = await cache.match(req);
+    if (res) {
+      const name = decodeURIComponent(res.headers.get('x-name') || '') || 'shared';
+      files.push(new File([await res.blob()], name, { type: res.headers.get('content-type') || '' }));
+    }
+    await cache.delete(req);
+  }
+  return files;
+}

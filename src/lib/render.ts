@@ -97,6 +97,31 @@ export function copyStack(list: Item[], s: Settings) {
   return navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
 }
 
+/** Whether this browser can hand image files to the system share sheet (most phones; some desktops). */
+export const canShareFiles = (() => {
+  try {
+    return typeof navigator !== 'undefined' && typeof navigator.canShare === 'function'
+      && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] });
+  } catch {
+    return false;
+  }
+})();
+
+/**
+ * Renders stacks as files ready for the share sheet: one image per stack,
+ * or a single PDF holding every stack as a page.
+ */
+export async function shareFiles(lists: Item[][], names: string[], pdfName: string, s: Settings, progress?: (i: number) => void) {
+  if (s.fmt === 'pdf') return [new File([await buildPdf(lists, s, progress)], pdfName, { type: 'application/pdf' })];
+  const files: File[] = [];
+  for (let i = 0; i < lists.length; i++) {
+    progress?.(i);
+    const b = await imageBlob(lists[i], s);
+    files.push(new File([b], names[i], { type: b.type }));
+  }
+  return files;
+}
+
 export function saveBlob(blob: Blob, name: string) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

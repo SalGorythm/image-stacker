@@ -6,11 +6,11 @@ import { GroupSettings, LayoutSettings } from './components/Settings';
 import { useEvent, useToast } from './hooks';
 import { drag } from './lib/drag';
 import {
-  fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName,
+  fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles,
 } from './lib/files';
 import { computeGroups } from './lib/groups';
 import { isDeck, isPdf, pdfPages } from './lib/pdf';
-import { buildPdf, buildZip, copyStack, imageBlob, saveBlob, TOO_BIG } from './lib/render';
+import { buildPdf, buildZip, canShareFiles, copyStack, imageBlob, saveBlob, shareFiles, TOO_BIG } from './lib/render';
 import { loadItems, loadSettings, saveItems, saveSettings } from './lib/storage';
 import type { Item, PdfSrc, Settings } from './lib/types';
 
@@ -50,7 +50,11 @@ export default function App() {
           show(`Restored ${r.items.length} image${r.items.length > 1 ? 's' : ''} from last time.`);
         } else setItems(sampleItems());
         setReady(true);
-      });
+        // Opened from the share sheet of another app: add what was shared
+        return takeSharedFiles().then(files => { if (files.length) addFiles(files); });
+      })
+      .catch(() => show('Could not open the shared files. Try sharing them again.', { err: true }));
+    // addFiles is a stable useEvent callback declared below, so it is read inside the callback only
   }, [show]);
 
   const saveTimer = useRef<number | undefined>(undefined);
@@ -179,6 +183,33 @@ export default function App() {
     saveBlob(await buildZip(files, s, i => show(`Building image ${i + 1} of ${n}…`, { keep: true })), base + '.zip');
     show(`Saved ${base}.zip with ${n} images.`);
   });
+  // Rendering HD stacks can outlast the click's permission to open the share sheet;
+  // then the toast offers "Share now", which is a fresh click.
+  const share = (all: boolean) => run(async () => {
+    const idx = all ? groups.map((_, i) => i) : [c];
+    const n = idx.length;
+    show('Preparing…', { keep: true });
+    const files = await shareFiles(
+      idx.map(i => groups[i].list),
+      idx.map(i => fileName(s.fname, s.fmt === 'pdf' ? 'png' : s.fmt, i, labels)),
+      all ? `${baseName(s.fname)}.pdf` : fileName(s.fname, 'pdf', c, labels),
+      s,
+      i => n > 1 && show(`Building image ${i + 1} of ${n}…`, { keep: true }),
+    );
+    if (!navigator.canShare?.({ files })) return show('This browser cannot share these files. Use Download instead.', { err: true });
+    const send = async (): Promise<void> => {
+      try {
+        await navigator.share({ files });
+        show(files.length > 1 ? `Shared ${files.length} images.` : 'Shared.');
+      } catch (e) {
+        const name = e instanceof DOMException ? e.name : '';
+        if (name === 'AbortError') show('Sharing cancelled.');
+        else if (name === 'NotAllowedError') show('Ready to share.', { keep: true, action: { label: 'Share now', fn: send } });
+        else show('Sharing failed. Use Download instead.', { err: true });
+      }
+    };
+    await send();
+  });
   const copy = () => run(async () => {
     try {
       await copyStack(list, s);
@@ -286,6 +317,7 @@ export default function App() {
           onSave={save}
           onSaveAll={saveAll}
           onCopy={copy}
+          onShare={canShareFiles ? share : undefined}
           onSplit={max => {
             // Spread evenly: 10 images with a max of 6 become 5 + 5, not 6 + 4, so every stack is wider
             const N = items.length, k = Math.ceil(N / Math.ceil(N / max));

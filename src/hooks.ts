@@ -12,18 +12,32 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+/** Where the app is running, for install instructions when the browser gives no prompt. */
+export type InstallPlatform = 'ios' | 'android' | 'mac-safari' | 'firefox' | 'chromium' | 'other';
+
+function platform(): InstallPlatform {
+  const ua = navigator.userAgent;
+  const iPadOS = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  if (/iPhone|iPad|iPod/.test(ua) || iPadOS) return 'ios';
+  if (/Android/.test(ua)) return /Firefox/.test(ua) ? 'firefox' : 'android';
+  if (/Firefox/.test(ua)) return 'firefox';
+  if (/Edg\/|Chrome\//.test(ua)) return 'chromium';
+  if (/Safari\//.test(ua) && /Macintosh/.test(ua)) return 'mac-safari';
+  return 'other';
+}
+
 /**
- * Install support: Chrome/Edge/Android hand over a prompt event; iPhone and iPad need
- * the person to use Share → Add to Home Screen, so `install` returns 'ios' there.
+ * Install support. Chrome, Edge and Android offer a prompt the app can open; Safari, iPhone and
+ * Firefox don't, and Chrome stops offering it once the app is installed. The button stays, and
+ * without a prompt it explains the steps for this browser (or says the app is already installed).
  */
 export function useInstall() {
   const [evt, setEvt] = useState<InstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(
-    () => matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true,
-  );
+  const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true;
+  const [installed, setInstalled] = useState(() => { try { return localStorage.getItem('app-installed') === '1'; } catch { return false; } });
   useEffect(() => {
-    const offer = (e: Event) => { e.preventDefault(); setEvt(e as InstallPromptEvent); };
-    const done = () => { setInstalled(true); setEvt(null); };
+    const offer = (e: Event) => { e.preventDefault(); setEvt(e as InstallPromptEvent); setInstalled(false); };
+    const done = () => { setInstalled(true); setEvt(null); try { localStorage.setItem('app-installed', '1'); } catch { /* ignore */ } };
     window.addEventListener('beforeinstallprompt', offer);
     window.addEventListener('appinstalled', done);
     return () => {
@@ -31,15 +45,16 @@ export function useInstall() {
       window.removeEventListener('appinstalled', done);
     };
   }, []);
-  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const install = async (): Promise<'ios' | 'done'> => {
-    if (!evt) return 'ios';
-    await evt.prompt();
-    if ((await evt.userChoice).outcome === 'accepted') setInstalled(true);
+  /** Opens the browser's prompt when there is one; otherwise tells the caller to show the steps. */
+  const install = async (): Promise<'prompted' | 'steps'> => {
+    if (!evt) return 'steps';
+    try { await evt.prompt(); } catch { return 'steps'; }
+    if ((await evt.userChoice).outcome === 'accepted') { setInstalled(true); try { localStorage.setItem('app-installed', '1'); } catch { /* ignore */ } }
     setEvt(null);
-    return 'done';
+    return 'prompted';
   };
-  return { canInstall: !installed && (!!evt || ios), install };
+  // Inside the installed app the button has nothing to do, so it hides there
+  return { showInstall: !standalone, canPrompt: !!evt, installed: installed && !evt, platform: platform(), install };
 }
 
 export interface ToastAction { label: string; fn: () => void }

@@ -172,21 +172,43 @@ button.num:hover{color:var(--accent);text-decoration:underline dotted}
 }
 @media (max-width:420px){.head-actions .btn:not(.primary){display:none}}
 
-/* Footer */
-.site-foot{border-top:1px solid var(--line);background:var(--panel);margin-top:12px;padding-bottom:env(safe-area-inset-bottom,0px)}
-.site-foot-in{max-width:1180px;margin:0 auto;padding-block:28px 32px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:24px;
+/* Footer: about and promises first, then the three tool groups and the stacker's sections; credits in a slim bar */
+.site-foot{border-top:1px solid var(--line);background:var(--panel);margin-top:24px}
+.site-foot-in{max-width:1180px;margin:0 auto;padding-block:32px 28px;display:grid;
+  grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(0,1fr));gap:28px 24px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.foot-about{display:flex;flex-direction:column;gap:10px;min-width:0}
-.foot-about p{margin:0;color:var(--muted);font-size:13.5px;max-width:52ch}
-.foot-nav{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
-.foot-nav .label{margin-bottom:4px}
-.foot-nav .nav-link{padding:4px 0;background:none}
-.foot-nav .nav-link:hover{background:none;text-decoration:underline}
-.foot-note{font-size:12.5px;color:var(--muted);margin-top:6px}
-@media (max-width:820px){
-  .site-foot-in{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+.foot-about{display:flex;flex-direction:column;gap:12px;min-width:0}
+.foot-about p{margin:0;color:var(--muted);font-size:13.5px;max-width:44ch}
+.foot-badges{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.foot-badges li{font-size:12px;font-weight:500;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 10px}
+.foot-badges li::before{content:"✓ ";font-weight:700}
+.foot-nav{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+.foot-nav .label{margin-bottom:6px}
+.foot-nav .nav-link{padding:3px 0;background:none;font-size:13.5px;text-decoration:none;color:var(--muted)}
+.foot-nav .nav-link:hover,.foot-nav .nav-link.on{background:none;color:var(--fg)}
+.foot-nav .nav-link:hover{text-decoration:underline}
+.foot-bottom{border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.foot-bottom-in{max-width:1180px;margin:0 auto;padding-block:14px;display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;
+  font-size:12px;color:var(--muted);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.foot-credits{max-width:80ch}
+.foot-credits a{color:inherit}
+@media (max-width:1000px){
+  .site-foot-in{grid-template-columns:repeat(4,minmax(0,1fr))}
   .foot-about{grid-column:1/-1}
+  .foot-about p{max-width:70ch}
 }
+@media (max-width:620px){
+  .site-foot-in{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .foot-bottom-in{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+}
+
+/* Header tool links: the most used tools stay visible, fewer as the screen narrows; the rest are in All tools */
+@media (max-width:1240px){.tool-link.feat[data-rank="4"]{display:none}}
+@media (max-width:1120px){.tool-link.feat[data-rank="3"]{display:none}}
+@media (max-width:1000px){.tool-link.feat[data-rank="2"]{display:none}}
+@media (max-width:820px){.tool-link.feat[data-rank="2"]{display:inline-block}.tool-link.feat[data-rank="3"]{display:none}}
+@media (max-width:420px){.tool-link.feat[data-rank="2"]{display:none}.tool-link{padding:6px 10px}}
 
 /* How it works */
 .help{width:min(620px,100%);overflow:auto}

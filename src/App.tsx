@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DropZone } from './components/DropZone';
 import { ImageList } from './components/ImageList';
 import { Help } from './components/Help';
+import { InstallHelp } from './components/InstallHelp';
 import { PagePicker } from './components/PagePicker';
 import { RedactEditor } from './components/RedactEditor';
 import { SiteFooter, SiteHeader, type NavItem, type ToolLink } from './components/Site';
@@ -314,7 +315,8 @@ export default function App() {
     try { localStorage.setItem('stacker-guide-seen', '1'); } catch { /* private mode */ }
   };
   const [redacting, setRedacting] = useState<Item | null>(null);
-  const { canInstall, install } = useInstall();
+  const { showInstall, canPrompt, installed, platform, install } = useInstall();
+  const [installHelp, setInstallHelp] = useState(false);
   // Section links work from any tool: they open the stacker first
   const toStacker = (then: () => void) => { location.hash = '#/'; setTimeout(then, 80); };
   const goTo = (id: string) => {
@@ -377,16 +379,18 @@ export default function App() {
     T('safe', 'Safe to share', 'See and remove hidden location and phone details', 'Photos'),
     T('convert', 'Convert', 'HEIC, WebP and AVIF to JPG or PNG', 'Photos'),
   ];
-  const onInstall = canInstall
-    ? async () => { if ((await install()) === 'ios') show('On iPhone or iPad: tap Share, then Add to Home Screen.', { keep: false }); }
+  // The button stays visible in the browser: it opens the install prompt, or the steps for this browser
+  const onInstall = showInstall
+    ? async () => { if ((await install()) === 'steps') setInstallHelp(true); }
     : undefined;
 
   const n = list.length;
   return (
     <>
-    <SiteHeader tools={tools} sections={nav} showSections={route === 'stack'} onInstall={onInstall} onHelp={() => setHelp(true)} />
+    <SiteHeader tools={tools} sections={nav} showSections={route === 'stack'} onInstall={onInstall} installLabel={installed && !canPrompt ? 'Installed' : 'Install app'} onHelp={() => setHelp(true)} />
     {picking && <PagePicker info={picking.info} onDone={picking.done} />}
     {help && <Help onClose={closeHelp} />}
+    {installHelp && <InstallHelp platform={platform} installed={installed} onClose={() => setInstallHelp(false)} />}
     {redacting && (
       <RedactEditor
         item={redacting}
@@ -498,7 +502,7 @@ export default function App() {
       </div>
     </main>
     )}
-    <SiteFooter tools={tools} sections={nav} showSections={route === 'stack'} onInstall={onInstall} onHelp={() => setHelp(true)} />
+    <SiteFooter tools={tools} sections={nav} showSections={route === 'stack'} onInstall={onInstall} installLabel={installed && !canPrompt ? 'Installed' : 'Install app'} onHelp={() => setHelp(true)} />
     </>
   );
 }

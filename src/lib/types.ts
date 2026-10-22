@@ -34,6 +34,10 @@ export interface Settings {
   gtail: Tail;
   granges: string;
   fname: string;
+  /** Percent trimmed from each edge of every image. */
+  trim: { t: number; b: number; l: number; r: number };
+  /** Also remove plain margins detected on each image. */
+  autoTrim: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -47,6 +51,8 @@ export const DEFAULT_SETTINGS: Settings = {
   gtail: 'rest',
   granges: '',
   fname: 'stacked',
+  trim: { t: 0, b: 0, l: 0, r: 0 },
+  autoTrim: false,
 };
 
 /** Target width for PDF pages at each quality (0 = as stored). */

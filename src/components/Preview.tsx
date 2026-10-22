@@ -29,12 +29,12 @@ export function Preview(p: Props) {
   const multi = count > 1;
 
   // Preview uses stored images; the size label shows what the export will be at the chosen quality
-  const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width]);
-  const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality]);
+  const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width, s.trim, s.autoTrim]);
+  const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality, s.trim, s.autoTrim]);
   const wa = s.quality === 'whatsapp';
-  const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width]);
+  const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width, s.trim, s.autoTrim]);
   useEffect(() => {
-    if (L && cv.current) paint(cv.current, L, s.gapColor, false);
+    if (L && cv.current) paint(cv.current, L, s, false);
   }, [L, s.gapColor]);
 
   return (

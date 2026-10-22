@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { DropZone } from './components/DropZone';
 import { ImageList } from './components/ImageList';
 import { Preview } from './components/Preview';
-import { GroupSettings, LayoutSettings } from './components/Settings';
+import { GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
 import { useEvent, useToast } from './hooks';
 import { drag } from './lib/drag';
 import {
@@ -292,6 +292,7 @@ export default function App() {
           )}
 
           <LayoutSettings s={s} update={update} />
+          <TrimSettings s={s} update={update} />
           <GroupSettings
             s={s}
             update={update}

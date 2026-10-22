@@ -153,3 +153,43 @@ export function GroupSettings({ s, update, info, removeLabel, removeTitle, onRem
     </div>
   );
 }
+
+const EDGES = [['t', 'Top'], ['b', 'Bottom'], ['l', 'Left'], ['r', 'Right']] as const;
+
+export function TrimSettings({ s, update }: Props) {
+  const any = s.autoTrim || EDGES.some(([k]) => s.trim[k] > 0);
+  return (
+    <div className="section">
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <span className="label">Trim edges</span>
+        {any && (
+          <button className="btn sm" onClick={() => update({ trim: { t: 0, b: 0, l: 0, r: 0 }, autoTrim: false })}>
+            Reset
+          </button>
+        )}
+      </div>
+      <label className="check">
+        <input type="checkbox" checked={s.autoTrim} onChange={e => update({ autoTrim: e.target.checked })} />
+        Remove plain margins automatically
+      </label>
+      <div className="trim">
+        {EDGES.map(([k, name]) => (
+          <label key={k} className="trim-edge">
+            <span>{name}</span>
+            <input
+              type="number"
+              min={0}
+              max={45}
+              step={0.5}
+              value={s.trim[k]}
+              aria-label={`Trim ${name.toLowerCase()} (percent)`}
+              onChange={e => update({ trim: { ...s.trim, [k]: Math.min(45, Math.max(0, Number(e.target.value) || 0)) } })}
+            />
+            <span className="stat">%</span>
+          </label>
+        ))}
+      </div>
+      <p className="hint">Applies to every image, in percent of its size, so mixed sizes trim alike.</p>
+    </div>
+  );
+}

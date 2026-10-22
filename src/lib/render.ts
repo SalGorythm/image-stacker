@@ -1,14 +1,27 @@
 import { CANVAS_LIMITS, layout, type Layout } from './layout';
 import { renderPage } from './pdf';
 import { imgH, imgW, QUALITY_WIDTH, WHATSAPP_BOX, type Item, type Settings } from './types';
+import { blankEdges, combine, NO_CROP, type Crop } from './trim';
 import { whatsappAdvice } from './whatsapp';
 
 export const TOO_BIG = 'The image is too large for this browser to export. Try fewer images per group, Standard quality, or JPG.';
 
-const size = (it: Item) => ({ w: imgW(it), h: imgH(it), vector: !!it.src });
+const noTrim = (s: Settings) => !s.autoTrim && !s.trim.t && !s.trim.b && !s.trim.l && !s.trim.r;
+
+/** What is cut from each edge of this image: detected blank margins (if on) plus the manual trim. */
+export function cropOf(it: Item, s: Settings): Crop {
+  if (noTrim(s)) return NO_CROP;
+  return combine(s.autoTrim ? blankEdges(it.img) : NO_CROP, s.trim);
+}
+
+/** Size of each image after trimming, for layout. */
+const sizer = (s: Settings) => (it: Item) => {
+  const c = cropOf(it, s);
+  return { w: imgW(it) * (1 - c.l - c.r), h: imgH(it) * (1 - c.t - c.b), vector: !!it.src };
+};
 
 export function stackLayout(list: Item[], s: Settings, hq: boolean): Layout<Item> | null {
-  return layout(list, size, {
+  return layout(list, sizer(s), {
     gap: s.gap,
     width: s.width,
     q: hq ? QUALITY_WIDTH[s.quality] : 0,
@@ -18,24 +31,30 @@ export function stackLayout(list: Item[], s: Settings, hq: boolean): Layout<Item
 }
 
 export const stackAdvice = (list: Item[], s: Settings) =>
-  whatsappAdvice(list, size, s.gap, s.width, QUALITY_WIDTH.whatsapp);
+  whatsappAdvice(list, sizer(s), s.gap, s.width, QUALITY_WIDTH.whatsapp);
 
-/** Draws a stack. With hq, PDF pages are re-rendered at the size they're drawn instead of scaling the stored preview. */
-export async function paint(c: HTMLCanvasElement, L: Layout<Item>, bg: string, hq: boolean) {
+/**
+ * Draws a stack, each image trimmed. With hq, PDF pages are re-rendered so that their trimmed
+ * part comes out at the size it's drawn, instead of scaling up the stored preview.
+ */
+export async function paint(c: HTMLCanvasElement, L: Layout<Item>, s: Settings, hq: boolean) {
   c.width = L.width;
   c.height = L.height;
   const x = c.getContext('2d')!;
-  x.fillStyle = bg;
+  x.fillStyle = s.gapColor;
   x.fillRect(0, 0, L.width, L.height);
   x.imageSmoothingEnabled = true;
   x.imageSmoothingQuality = 'high';
   let y = 0;
   for (const p of L.parts) {
-    let src: CanvasImageSource = p.it.img;
-    if (hq && p.it.src && p.w > imgW(p.it)) {
-      try { src = await renderPage(p.it.src, p.w); } catch { /* fall back to stored image */ }
+    const cr = cropOf(p.it, s), keepW = 1 - cr.l - cr.r, keepH = 1 - cr.t - cr.b;
+    let src: HTMLImageElement | HTMLCanvasElement = p.it.img;
+    if (hq && p.it.src && p.w > imgW(p.it) * keepW) {
+      try { src = await renderPage(p.it.src, p.w / keepW); } catch { /* fall back to stored image */ }
     }
-    x.drawImage(src, Math.round((L.width - p.w) / 2), y, p.w, p.h);
+    const sw = src instanceof HTMLImageElement ? src.naturalWidth : src.width;
+    const sh = src instanceof HTMLImageElement ? src.naturalHeight : src.height;
+    x.drawImage(src, cr.l * sw, cr.t * sh, keepW * sw, keepH * sh, Math.round((L.width - p.w) / 2), y, p.w, p.h);
     if (src !== p.it.img && src instanceof HTMLCanvasElement) src.width = src.height = 0;
     y += p.h + L.gap;
   }
@@ -48,7 +67,7 @@ async function renderExport(list: Item[], s: Settings) {
   const L = stackLayout(list, s, true);
   if (!L) throw new Error('Nothing to export');
   const c = document.createElement('canvas');
-  await paint(c, L, s.gapColor, true);
+  await paint(c, L, s, true);
   return c;
 }
 

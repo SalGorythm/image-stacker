@@ -127,3 +127,8 @@ button.num:hover{color:var(--accent);text-decoration:underline dotted}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .warn{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;font-size:13px;color:var(--warn-fg);background:var(--warn-bg);border-radius:8px;padding:8px 12px}
 .warn span{flex:1 1 240px;min-width:0}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--fg);cursor:pointer}
+.check input{width:16px;height:16px;accent-color:var(--accent);margin:0}
+.trim{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px}
+.trim-edge{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+@media (pointer:coarse){.check input{width:20px;height:20px}}

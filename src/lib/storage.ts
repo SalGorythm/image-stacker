@@ -71,7 +71,7 @@ const OPTIONS: Partial<Record<keyof Settings, readonly string[]>> = {
 
 /** Reads saved settings, including the older single-file version's format (gsize as "4,3,5"). */
 export function loadSettings(): Settings {
-  const s: Settings = { ...DEFAULT_SETTINGS };
+  const s: Settings = { ...DEFAULT_SETTINGS, trim: { ...DEFAULT_SETTINGS.trim } };
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
     if (raw.gap != null && !isNaN(+raw.gap)) s.gap = +raw.gap;
@@ -83,6 +83,9 @@ export function loadSettings(): Settings {
     else if (typeof raw.gsize === 'string') s.sizes = raw.gsize.split(',');
     if (typeof raw.granges === 'string') s.granges = raw.granges;
     if (typeof raw.fname === 'string') s.fname = raw.fname;
+    if (raw.trim && typeof raw.trim === 'object')
+      for (const k of ['t', 'b', 'l', 'r'] as const) s.trim[k] = Math.min(45, Math.max(0, Number(raw.trim[k]) || 0));
+    if (typeof raw.autoTrim === 'boolean') s.autoTrim = raw.autoTrim;
   } catch { /* private mode or bad JSON */ }
   return s;
 }

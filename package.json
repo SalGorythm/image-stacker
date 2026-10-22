@@ -18,6 +18,7 @@
     "jszip": "^3.10.2",
     "libheif-js": "^1.23.5",
     "pdfjs-dist": "^6.4.299",
+    "qrcode-generator": "^2.0.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

@@ -285,3 +285,5 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .id-frame{width:100%;height:auto;max-height:62vh;object-fit:contain;border-radius:8px;touch-action:none;cursor:grab;box-shadow:0 1px 6px rgba(0,0,0,.15);background:var(--checker)}
 .id-out{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .id-out img{max-width:100%;border:1px solid var(--line);border-radius:4px}
+.wrap-seg{flex-wrap:wrap;width:fit-content;max-width:100%}
+.warn-text{color:var(--danger)}

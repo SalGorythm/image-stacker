@@ -12,6 +12,7 @@ import { CutoutTool } from './tools/CutoutTool';
 import { PhotoTool } from './tools/PhotoTool';
 import { QrTool } from './tools/QrTool';
 import { TextTool } from './tools/TextTool';
+import { VideoTool } from './tools/VideoTool';
 import { WatermarkTool } from './tools/WatermarkTool';
 import { SafeTool } from './tools/SafeTool';
 import { ScanTool } from './tools/ScanTool';
@@ -356,6 +357,7 @@ export default function App() {
     T('cards', 'Cards', 'Verse, quote and announcement cards, Urdu and Arabic ready', 'Share'),
     T('qr', 'QR codes', 'WhatsApp, WiFi and contact codes as posters, never expire', 'Share'),
     T('watermark', 'Watermark', 'Your logo or name on many photos at once', 'Share'),
+    T('video', 'Video', 'Before/after reveal or slideshow as an MP4 for WhatsApp', 'Share'),
     T('fit', 'Fit to size', 'Exact KB and pixels for exam, bank and visa forms', 'Forms and documents'),
     T('scan', 'Scan', 'Phone photos of paper into a clean PDF under a size limit', 'Forms and documents'),
     T('photo', 'Passport photo', 'Frame to country rules, digital file and print sheet', 'Forms and documents'),
@@ -397,7 +399,8 @@ export default function App() {
       : route === 'qr' ? <QrTool toast={toast} show={show} />
       : route === 'text' ? <TextTool intakeRef={intake} toast={toast} show={show} />
       : route === 'watermark' ? <WatermarkTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'cutout' ? <CutoutTool intakeRef={intake} toast={toast} show={show} /> : (
+      : route === 'cutout' ? <CutoutTool intakeRef={intake} toast={toast} show={show} />
+      : route === 'video' ? <VideoTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

@@ -23,6 +23,7 @@
     "jspdf": "^4.2.1",
     "jszip": "^3.10.2",
     "libheif-js": "^1.23.5",
+    "mp4-muxer": "^5.2.2",
     "onnxruntime-web": "^1.30.0",
     "pdfjs-dist": "^6.4.299",
     "qrcode-generator": "^2.0.4",

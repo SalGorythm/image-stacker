@@ -69,6 +69,7 @@ const OPTIONS: Partial<Record<keyof Settings, readonly string[]>> = {
   gmode: ['all', 'every', 'ranges'],
   gtail: ['rest', 'repeat'],
   captionPos: ['top', 'bottom'],
+  arrange: ['vertical', 'horizontal', 'grid'],
 };
 
 /** Reads saved settings, including the older single-file version's format (gsize as "4,3,5"). */
@@ -92,6 +93,7 @@ export function loadSettings(): Settings {
     if (typeof raw.numbers === 'boolean') s.numbers = raw.numbers;
     if (typeof raw.watermark === 'string') s.watermark = raw.watermark;
     if (typeof raw.joinOverlap === 'boolean') s.joinOverlap = raw.joinOverlap;
+    if (raw.columns != null) s.columns = Math.min(8, Math.max(1, Math.floor(Number(raw.columns)) || 2));
   } catch { /* private mode or bad JSON */ }
   return s;
 }

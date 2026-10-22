@@ -31,18 +31,40 @@ export function LayoutSettings({ s, update }: Props) {
             onChange={e => update({ gapColor: e.target.value })}
           />
         </div>
-        <label htmlFor="width">Width</label>
+        <label htmlFor="arrange">Arrange</label>
+        <div className="inline">
+          <select id="arrange" value={s.arrange} onChange={e => update({ arrange: e.target.value as Settings['arrange'] })}>
+            <option value="vertical">Top to bottom</option>
+            <option value="horizontal">Side by side</option>
+            <option value="grid">Grid</option>
+          </select>
+          {s.arrange === 'grid' && (
+            <>
+              <input
+                type="number"
+                min={1}
+                max={8}
+                value={s.columns}
+                aria-label="Columns"
+                style={{ width: 64, flex: 'none' }}
+                onChange={e => update({ columns: Math.min(8, Math.max(1, Math.floor(Number(e.target.value)) || 1)) })}
+              />
+              <span className="stat">columns</span>
+            </>
+          )}
+        </div>
+        <label htmlFor="width">Size</label>
         <select id="width" value={s.width} onChange={e => update({ width: e.target.value as WidthMode })}>
-          <option value="widest">Scale all to widest</option>
-          <option value="narrowest">Scale all to narrowest</option>
-          <option value="original">Keep original, centre</option>
+          <option value="widest">{s.arrange === 'horizontal' ? 'Match the tallest' : 'Match the widest'}</option>
+          <option value="narrowest">{s.arrange === 'horizontal' ? 'Match the shortest' : 'Match the narrowest'}</option>
+          <option value="original">Keep original sizes</option>
         </select>
       </div>
-      <label className="check">
+      {s.arrange === 'vertical' && <label className="check">
         <input type="checkbox" checked={s.joinOverlap} onChange={e => update({ joinOverlap: e.target.checked })} />
         Join overlapping screenshots
-      </label>
-      {s.joinOverlap && (
+      </label>}
+      {s.joinOverlap && s.arrange === 'vertical' && (
         <p className="hint">Consecutive screenshots of a long chat or page are joined where they overlap, and the repeated part is removed.</p>
       )}
     </div>

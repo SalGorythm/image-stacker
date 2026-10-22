@@ -50,6 +50,8 @@ export interface Settings {
   watermark: string;
   /** Join consecutive scrolling screenshots, removing what repeats. */
   joinOverlap: boolean;
+  arrange: 'vertical' | 'horizontal' | 'grid';
+  columns: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -70,6 +72,8 @@ export const DEFAULT_SETTINGS: Settings = {
   numbers: false,
   watermark: '',
   joinOverlap: false,
+  arrange: 'vertical',
+  columns: 2,
 };
 
 /** Target width for PDF pages at each quality (0 = as stored). */

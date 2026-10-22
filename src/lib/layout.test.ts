@@ -32,3 +32,22 @@ describe('layout', () => {
 
   it('returns null for an empty stack', () => expect(layout([], id, { gap: 0, width: 'widest', q: 0, ...big })).toBeNull());
 });
+
+describe('other arrangements', () => {
+  const pic = (w: number, h: number): Sized => ({ w, h, vector: false });
+  it('puts images side by side at one height', () => {
+    const L = layout([pic(400, 200), pic(100, 100)], id, { gap: 10, width: 'widest', q: 0, ...big, arrange: 'horizontal' })!;
+    expect(L.parts.map(p => [p.x, p.y, p.w, p.h])).toEqual([[0, 0, 400, 200], [410, 0, 200, 200]]);
+    expect([L.width, L.height]).toEqual([610, 200]);
+  });
+  it('fills a grid row by row and centres short images in their row', () => {
+    const L = layout([pic(100, 50), pic(100, 100), pic(100, 50)], id, { gap: 0, width: 'widest', q: 0, ...big, arrange: 'grid', columns: 2 })!;
+    expect(L.parts.map(p => [p.x, p.y])).toEqual([[0, 25], [100, 0], [0, 100]]);
+    expect([L.width, L.height]).toEqual([200, 150]);
+  });
+  it('scales a grid of PDF pages so the whole image is HD wide', () => {
+    const L = layout(Array(4).fill(slide(800, 450)), id, { gap: 0, width: 'widest', q: 2560, ...big, arrange: 'grid', columns: 2 })!;
+    expect(L.width).toBe(2560);
+    expect(L.parts[1].x).toBe(1280);
+  });
+});

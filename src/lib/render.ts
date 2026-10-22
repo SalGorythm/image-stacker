@@ -35,7 +35,7 @@ export interface StackLayout extends Layout<Item> {
 function prepare(list: Item[], s: Settings) {
   const crops = list.map(it => cropOf(it, s));
   const joined = list.map(() => false);
-  if (s.joinOverlap)
+  if (s.joinOverlap && s.arrange === 'vertical')
     for (let i = 0; i < list.length - 1; i++) {
       const seam = seamBetween(list[i], list[i + 1]);
       if (!seam) continue;
@@ -66,11 +66,15 @@ export function stackLayout(list: Item[], s: Settings, hq: boolean): StackLayout
     box: hq && s.quality === 'whatsapp' ? WHATSAPP_BOX : undefined,
     ...bands(s),
     joined: P.joined,
+    arrange: s.arrange,
+    columns: s.columns,
   });
   return L && { ...L, parts: L.parts.map(p => ({ ...p, it: list[p.it] })), crops: P.crops, joined: P.joined };
 }
 
+/** The WhatsApp readability check is for tall stacks; side-by-side and grids skip it. */
 export function stackAdvice(list: Item[], s: Settings) {
+  if (s.arrange !== 'vertical') return null;
   const P = prepare(list, s);
   return whatsappAdvice(P.idx, P.size, { gap: s.gap, width: s.width, q: QUALITY_WIDTH.whatsapp, ...bands(s), joined: P.joined });
 }
@@ -122,7 +126,6 @@ export async function paint(c: HTMLCanvasElement, L: StackLayout, s: Settings, h
   const caption = meta ? fillCaption(s.caption, meta) : s.caption.trim();
   if (caption && L.headH) bandText(x, caption, L.width, 0, L.headH, ink);
 
-  let y = L.headH;
   for (const [k, p] of L.parts.entries()) {
     const cr = L.crops[k], keepW = 1 - cr.l - cr.r, keepH = 1 - cr.t - cr.b;
     let src: HTMLImageElement | HTMLCanvasElement = p.it.img;
@@ -131,11 +134,10 @@ export async function paint(c: HTMLCanvasElement, L: StackLayout, s: Settings, h
     }
     const sw = src instanceof HTMLImageElement ? src.naturalWidth : src.width;
     const sh = src instanceof HTMLImageElement ? src.naturalHeight : src.height;
-    const left = Math.round((L.width - p.w) / 2);
-    x.drawImage(src, cr.l * sw, cr.t * sh, keepW * sw, keepH * sh, left, y, p.w, p.h);
+    const left = p.x, top = p.y;
+    x.drawImage(src, cr.l * sw, cr.t * sh, keepW * sw, keepH * sh, left, top, p.w, p.h);
     if (src !== p.it.img && src instanceof HTMLCanvasElement) src.width = src.height = 0;
     // Hidden areas are stored in full-image fractions; map them through this image's trim to its tile
-    const top = y;
     applyRedactions(x, p.it.redact, r => ({
       x: left + ((r.x - cr.l) / keepW) * p.w,
       y: top + ((r.y - cr.t) / keepH) * p.h,
@@ -143,8 +145,7 @@ export async function paint(c: HTMLCanvasElement, L: StackLayout, s: Settings, h
       h: (r.h / keepH) * p.h,
     }), { x: left, y: top, w: p.w, h: p.h });
     const pos = meta?.positions?.get(p.it.id);
-    if (s.numbers && pos) badge(x, pos, left, y, L.width);
-    y += p.h + (L.joined[k] ? 0 : L.gap);
+    if (s.numbers && pos) badge(x, pos, left, top, Math.max(p.w, L.width / 2));
   }
 
   if (caption && L.footH) bandText(x, caption, L.width, L.height - L.footH, L.footH, ink);

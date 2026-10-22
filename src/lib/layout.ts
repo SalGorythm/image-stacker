@@ -9,6 +9,8 @@ export interface Sized {
 
 export interface Part<T> {
   it: T;
+  x: number;
+  y: number;
   w: number;
   h: number;
 }
@@ -27,10 +29,13 @@ export interface Layout<T> {
   footH: number;
 }
 
+export type Arrange = 'vertical' | 'horizontal' | 'grid';
+
 export interface LayoutOptions {
   gap: number;
+  /** How images are matched in size: the largest, the smallest, or left as they are. */
   width: WidthMode;
-  /** HD target width for PDF pages (0 = as stored). */
+  /** HD target width of the finished image when it holds PDF pages (0 = as stored). */
   q: number;
   maxSide: number;
   maxArea: number;
@@ -39,57 +44,86 @@ export interface LayoutOptions {
   /** Caption band heights as a fraction of the stack's width (they scale with it). */
   head?: number;
   foot?: number;
-  /** joined[i]: images i and i+1 continue each other, so no gap goes between them. */
+  /** joined[i]: images i and i+1 continue each other, so no gap goes between them (top to bottom only). */
   joined?: boolean[];
+  arrange?: Arrange;
+  /** Columns for a grid. */
+  columns?: number;
 }
 
 // Browsers refuse to export canvases past these limits (Safari is much stricter on area)
 const isSafari = typeof navigator !== 'undefined' && /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
 export const CANVAS_LIMITS = { maxSide: 32000, maxArea: isSafari ? 16e6 : 120e6 };
 
+type Box = { x: number; y: number; w: number; h: number };
+
 /**
- * Lays out one stack top to bottom. Everything, gap included, is scaled together when HD
- * enlarges PDF pages, then shrunk if it would pass the browser's canvas limits.
+ * Matches image sizes: side by side they share a height, otherwise a width
+ * ('widest' uses the largest, 'narrowest' the smallest; 'original' leaves them).
+ */
+function matchSizes(s: Sized[], o: LayoutOptions) {
+  if (o.width === 'original') return s.map(d => ({ w: d.w, h: d.h }));
+  const side = o.arrange === 'horizontal';
+  const vals = s.map(d => (side ? d.h : d.w));
+  const t = o.width === 'narrowest' ? Math.min(...vals) : Math.max(...vals);
+  return s.map(d => (side ? { w: (d.w * t) / d.h, h: t } : { w: t, h: (d.h * t) / d.w }));
+}
+
+/** Places sized images with the given gap; images are centred in their row or column. */
+function place(sizes: { w: number; h: number }[], gap: number, o: LayoutOptions): { boxes: Box[]; W: number; H: number } {
+  const n = sizes.length;
+  if (o.arrange === 'horizontal') {
+    const H = Math.max(...sizes.map(z => z.h));
+    let x = 0;
+    const boxes = sizes.map(z => { const b = { x, y: (H - z.h) / 2, w: z.w, h: z.h }; x += z.w + gap; return b; });
+    return { boxes, W: x - gap, H };
+  }
+  const C = o.arrange === 'grid' ? Math.max(1, Math.min(n, Math.floor(o.columns || 2))) : 1;
+  const cell = Math.max(...sizes.map(z => z.w));
+  const boxes: Box[] = [];
+  let y = 0;
+  for (let r = 0; r * C < n; r++) {
+    const row = sizes.slice(r * C, r * C + C);
+    const rowH = Math.max(...row.map(z => z.h));
+    row.forEach((z, c) => boxes.push({ x: c * (cell + gap) + (cell - z.w) / 2, y: y + (rowH - z.h) / 2, w: z.w, h: z.h }));
+    const last = r * C + row.length - 1;
+    y += rowH + (last === n - 1 ? 0 : C === 1 && o.joined?.[last] ? 0 : gap);
+  }
+  return { boxes, W: C * cell + (C - 1) * gap, H: y };
+}
+
+/**
+ * Lays out one stack. HD enlarges the whole stack (gap included) when it holds PDF pages; then it
+ * shrinks if it would pass the browser's canvas limits or the requested box. Sizes are rounded
+ * before the final placement so joined images meet without a hairline.
  */
 export function layout<T>(list: T[], size: (it: T) => Sized, o: LayoutOptions): Layout<T> | null {
   if (!list.length) return null;
-  const build = (hq: number) => {
-    const s = list.map(it => {
-      const d = size(it);
-      const w = hq && d.vector ? Math.max(hq, d.w) : d.w;
-      return { w, h: (d.h * w) / d.w };
-    });
-    const ws = s.map(x => x.w);
-    const target = o.width === 'narrowest' ? Math.min(...ws) : Math.max(...ws);
-    return { s, target, width: o.width === 'original' ? Math.max(...ws) : target };
-  };
-  const base = build(0);
-  const B = o.q ? build(o.q) : base;
-  const raw = B.s.map(x => (o.width === 'original' ? x : { w: B.target, h: (x.h * B.target) / x.w }));
-  const gap0 = (Math.max(0, o.gap || 0) * B.width) / base.width;
-  let gaps = 0;
-  for (let i = 0; i < raw.length - 1; i++) if (!o.joined?.[i]) gaps++;
-  const bands = ((o.head || 0) + (o.foot || 0)) * B.width;
-  const tall = raw.reduce((t, p) => t + p.h, 0) + gap0 * gaps + bands;
-  const limitFit = Math.min(1, o.maxSide / tall, o.maxSide / B.width, Math.sqrt(o.maxArea / (B.width * tall)));
+  const s = list.map(size);
+  const gap0 = Math.max(0, o.gap || 0);
+  const sizes = matchSizes(s, o);
+  const nat = place(sizes, gap0, o);
+  const bands = (o.head || 0) + (o.foot || 0);
+
+  const up = o.q && s.some(d => d.vector) ? Math.max(1, o.q / nat.W) : 1;
+  const W1 = nat.W * up, H1 = (nat.H + bands * nat.W) * up;
+  const limitFit = Math.min(1, o.maxSide / H1, o.maxSide / W1, Math.sqrt(o.maxArea / (W1 * H1)));
   let boxFit = 1;
-  if (o.box) {
-    const long = Math.max(B.width, tall), short = Math.min(B.width, tall);
-    boxFit = Math.min(1, o.box.long / long, o.box.short / short);
-  }
-  const fit = Math.min(limitFit, boxFit);
+  if (o.box) boxFit = Math.min(1, o.box.long / Math.max(W1, H1), o.box.short / Math.min(W1, H1));
+  const k = up * Math.min(limitFit, boxFit);
   // Round down inside a box so the finished stack never ends up a pixel over it
   const r = boxFit < limitFit ? Math.floor : Math.round;
-  const parts = list.map((it, i) => ({ it, w: r(raw[i].w * fit), h: r(raw[i].h * fit) }));
-  const gap = r(gap0 * fit);
-  const headH = r((o.head || 0) * B.width * fit), footH = r((o.foot || 0) * B.width * fit);
+
+  const gap = r(gap0 * k);
+  const fin = place(sizes.map(z => ({ w: r(z.w * k), h: r(z.h * k) })), gap, o);
+  const headH = r((o.head || 0) * nat.W * k), footH = r((o.foot || 0) * nat.W * k);
   return {
-    parts,
-    width: r(B.width * fit),
+    parts: fin.boxes.map((b, i) => ({ it: list[i], x: Math.round(b.x), y: headH + Math.round(b.y), w: b.w, h: b.h })),
+    width: Math.round(fin.W),
     gap,
     headH,
     footH,
-    height: headH + parts.reduce((t, p) => t + p.h, 0) + gap * gaps + footH,
+    height: headH + Math.round(fin.H) + footH,
     reduced: limitFit < 1 && limitFit <= boxFit,
     boxed: boxFit < 1 && boxFit < limitFit,
   };

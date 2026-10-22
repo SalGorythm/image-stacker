@@ -293,6 +293,7 @@ export default function App() {
       },
     },
     { key: 'groups', label: 'Groups', hint: 'Split into several stacks', run: () => goTo('groups') },
+    { key: 'layout', label: 'Layout', hint: 'Top to bottom, side by side or a grid; join screenshots', run: () => goTo('layout') },
     { key: 'trim', label: 'Trim', hint: 'Cut the edges of every image', run: () => goTo('trim') },
     { key: 'captions', label: 'Captions', hint: 'Caption, image numbers and watermark', run: () => goTo('captions') },
     {

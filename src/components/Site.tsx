@@ -102,9 +102,9 @@ export function SiteHeader({ tools, sections, showSections, onInstall, installLa
   return (
     <header className="site-head">
       <div className="site-head-in">
-        <a className="brand" href="/" aria-label="Image Stacker home">
+        <a className="brand" href="/" aria-label="PhotoSize home">
           <Mark />
-          <span>Image Stacker</span>
+          <span>PhotoSize</span>
         </a>
         <nav className="tools" aria-label="Tools">
           {featured.map((t, i) => (
@@ -135,7 +135,7 @@ export function SiteFooter({ tools, sections, onInstall, installLabel, onHelp }:
     <footer className="site-foot">
       <div className="site-foot-in">
         <div className="foot-about">
-          <span className="brand"><Mark /><span>Image Stacker</span></span>
+          <span className="brand"><Mark /><span>PhotoSize</span></span>
           <p>Free image tools for sharing on WhatsApp and Instagram and for filling in forms: stack, fit, scan, sign, caption and clean up photos.</p>
           <ul className="foot-badges" aria-label="Promises">
             <li>Nothing is uploaded</li>
@@ -162,7 +162,7 @@ export function SiteFooter({ tools, sections, onInstall, installLabel, onHelp }:
       <div className="foot-bottom">
         <div className="foot-bottom-in">
           <span className="foot-legal">
-            © 2026 Image Stacker · <a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/contact">Contact</a>
+            © 2026 PhotoSize · <a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/contact">Contact</a>
           </span>
           <span className="foot-credits">
             Runs on this device with <a href="https://github.com/strukturag/libheif" target="_blank" rel="noreferrer">libheif</a> (LGPL-3.0),{' '}

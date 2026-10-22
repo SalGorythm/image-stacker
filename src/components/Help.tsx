@@ -27,7 +27,7 @@ export function Help({ onClose }: Props) {
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="help-title" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="picker help">
         <div className="picker-head">
-          <strong id="help-title">How Image Stacker works</strong>
+          <strong id="help-title">How PhotoSize works</strong>
           <span className="stat">Nothing leaves your device</span>
         </div>
         <ol className="steps">
@@ -45,9 +45,9 @@ export function Help({ onClose }: Props) {
         </p>
         <p className="hint">Your images and settings are kept in this browser, so a reload doesn't lose them. Use Clear to remove them. Photos in Fit to size, Signature and Passport photo are never saved.</p>
         <p className="hint">
-          <strong>On a Mac with the installed app:</strong> macOS may say Image Stacker "tried to access your data from other apps". That happens when a
+          <strong>On a Mac with the installed app:</strong> macOS may say PhotoSize "tried to access your data from other apps". That happens when a
           photo is dragged straight out of another app such as WhatsApp or Photos. Save it to Downloads or Desktop first, then add it, or allow
-          Image Stacker in System Settings → Privacy &amp; Security.
+          PhotoSize in System Settings → Privacy &amp; Security.
         </p>
         <div className="row picker-foot">
           <button ref={close} className="btn primary" onClick={onClose}>Got it</button>

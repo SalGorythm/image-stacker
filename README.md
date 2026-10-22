@@ -1,6 +1,8 @@
-# Image Stacker
+# PhotoSize
 
-Stack images or PDF pages into tall images, grids or side-by-side strips, split them into groups, and download or share them as PNG, JPG, ZIP or PDF. Everything runs in the browser, and images are kept in IndexedDB between visits.
+Free image tools at [photosize.app](https://photosize.app) that run entirely in the browser: nothing is uploaded, no sign-up, no watermark.
+
+The Stacker (home page): Stack images or PDF pages into tall images, grids or side-by-side strips, split them into groups, and download or share them as PNG, JPG, ZIP or PDF. Everything runs in the browser, and images are kept in IndexedDB between visits.
 
 Tools (all in the browser, nothing uploaded):
 
@@ -39,7 +41,7 @@ Set these in Vercel → Settings → Environment Variables, then redeploy:
 
 | Variable | What it does |
 | --- | --- |
-| `SITE_URL` | Your domain, e.g. `https://photosize.app`. Defaults to Vercel's production domain. |
+| `SITE_URL` | Only to override the address. Vercel builds use `https://photosize.app`. |
 | `CONTACT_EMAIL` | Shown on the Contact and Privacy pages (AdSense wants a way to reach you). |
 | `ADSENSE_CLIENT` | `ca-pub-…` from AdSense. Adds the AdSense script, `ads.txt` and the ads section of the privacy policy. Ads stay off without it. |
 | `ADSENSE_SLOT` | Optional ad unit id for the one slot between each tool and its guide. |

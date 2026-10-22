@@ -1,6 +1,6 @@
 {
-  "name": "Image Stacker",
-  "short_name": "Stacker",
+  "name": "PhotoSize",
+  "short_name": "PhotoSize",
   "description": "Free image tools that run on your device: combine images, resize in KB for forms, scan to PDF, passport photos, signatures, Urdu and Arabic cards, and more.",
   "start_url": "/",
   "scope": "/",

@@ -43,7 +43,7 @@ export const TOOL_PAGES: Page[] = [
     title: 'Combine Images Into One – Stack Photos Online, Free',
     description: 'Combine photos, screenshots and PDF slides into one long image, a grid or Instagram carousel. Free, no sign-up, no watermark, nothing uploaded.',
     h1: 'Combine images into one',
-    summary: 'Image Stacker joins photos, screenshots and PDF pages into one tall image, a side-by-side strip or a grid, ready to send on WhatsApp or post on Instagram. It can split many images into groups and runs entirely in your browser.',
+    summary: 'The Stacker joins photos, screenshots and PDF pages into one tall image, a side-by-side strip or a grid, ready to send on WhatsApp or post on Instagram. It can split many images into groups and runs entirely in your browser.',
     steps: [
       'Drop, choose or paste (Ctrl/⌘ V) your images. PDFs open as pages you can pick from.',
       'Drag to reorder. Choose top to bottom, side by side or a grid, and add captions or numbers if you like.',

@@ -8,16 +8,16 @@ import { allPages, headTags, llmsTxt, robots, sitemap, staticBody } from './src/
 
 /**
  * Site settings come from environment variables (Vercel → Settings → Environment Variables, or .env):
- *   SITE_URL        https://your-domain (defaults to Vercel's production domain)
+ *   SITE_URL        overrides the address (defaults to https://photosize.app on Vercel)
  *   ADSENSE_CLIENT  ca-pub-… once AdSense gives you one; ads stay off without it
  *   ADSENSE_SLOT    an ad unit id for the slot under each tool (optional)
  *   CONTACT_EMAIL   shown on the contact and privacy pages
  */
 function siteConfig(mode: string): SiteConfig {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
-  const vercel = env.VERCEL_PROJECT_PRODUCTION_URL;
-  const url = (env.SITE_URL || (vercel ? `https://${vercel}` : 'http://localhost:4173')).replace(/\/+$/, '');
-  return { url, name: 'Image Stacker', adsClient: env.ADSENSE_CLIENT || '', adsSlot: env.ADSENSE_SLOT || '', contactEmail: env.CONTACT_EMAIL || '' };
+  // Every Vercel build (previews too) points search engines at the real domain
+  const url = (env.SITE_URL || (env.VERCEL ? 'https://photosize.app' : 'http://localhost:4173')).replace(/\/+$/, '');
+  return { url, name: 'PhotoSize', adsClient: env.ADSENSE_CLIENT || '', adsSlot: env.ADSENSE_SLOT || '', contactEmail: env.CONTACT_EMAIL || '' };
 }
 
 /** Writes one HTML file per page plus sitemap.xml, robots.txt, llms.txt and ads.txt after the build. */

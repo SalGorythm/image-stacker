@@ -101,7 +101,7 @@ let onBlocked: (names: string[]) => void = () => {};
 export const setBlockedHandler = (fn: (names: string[]) => void) => { onBlocked = fn; };
 
 export const blockedMessage = (names: string[]) =>
-  `Couldn't read ${names.length === 1 ? names[0] : `${names.length} files`}. On a Mac, the installed app can't open files kept inside other apps such as WhatsApp or Photos. Save it to Downloads or Desktop first and add it from there, or use Image Stacker in the browser.`;
+  `Couldn't read ${names.length === 1 ? names[0] : `${names.length} files`}. On a Mac, the installed app can't open files kept inside other apps such as WhatsApp or Photos. Save it to Downloads or Desktop first and add it from there, or use PhotoSize in the browser.`;
 
 /** Keeps only the files this app is allowed to read, reporting the rest once. */
 export async function readableOnly(files: File[]): Promise<File[]> {

@@ -31,7 +31,7 @@ async function set(k: string, v: unknown) {
 }
 
 interface Saved {
-  items: { id: number; name: string; blob: Blob; src?: PdfSrc; redact?: Redaction[] }[];
+  items: { id: number; name: string; blob: Blob; src?: PdfSrc; redact?: Redaction[]; located?: boolean }[];
   docs?: { id: string; name: string; blob: Blob }[];
   seq: number;
   pasteN: number;
@@ -40,7 +40,7 @@ interface Saved {
 export function saveItems(items: Item[], seq: number, pasteN: number) {
   const used = new Set(items.map(it => it.src?.doc).filter(Boolean));
   return set('state', {
-    items: items.flatMap(it => (it.blob ? [{ id: it.id, name: it.name, blob: it.blob, src: it.src, redact: it.redact }] : [])),
+    items: items.flatMap(it => (it.blob ? [{ id: it.id, name: it.name, blob: it.blob, src: it.src, redact: it.redact, located: it.located }] : [])),
     docs: [...docs].filter(([id]) => used.has(id)).map(([id, d]) => ({ id, name: d.name, blob: d.blob })),
     seq,
     pasteN,
@@ -56,7 +56,7 @@ export async function loadItems(loadImg: (url: string) => Promise<HTMLImageEleme
     try {
       const url = URL.createObjectURL(r.blob);
       const img = await loadImg(url);
-      items.push({ id: r.id, name: r.name, blob: r.blob, src: r.src, redact: r.redact, url, img, thumb: await thumbOf(img, url) });
+      items.push({ id: r.id, name: r.name, blob: r.blob, src: r.src, redact: r.redact, located: r.located, url, img, thumb: await thumbOf(img, url) });
     } catch { /* skip unreadable */ }
   }
   return items.length ? { items, seq: s.seq || 0, pasteN: s.pasteN || 0 } : null;

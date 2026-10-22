@@ -6,6 +6,7 @@ import { PagePicker } from './components/PagePicker';
 import { RedactEditor } from './components/RedactEditor';
 import { SiteFooter, SiteHeader, type NavItem, type ToolLink } from './components/Site';
 import { FitTool } from './tools/FitTool';
+import { SafeTool } from './tools/SafeTool';
 import { SignatureTool } from './tools/SignatureTool';
 import { Preview } from './components/Preview';
 import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
@@ -14,6 +15,7 @@ import { drag } from './lib/drag';
 import {
   fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles, makeThumb,
 } from './lib/files';
+import { readMeta } from './lib/exif';
 import { computeGroups } from './lib/groups';
 import { dropPdf, isDeck, isPdf, openPdf, pdfPages, type PdfInfo } from './lib/pdf';
 import { buildPdf, buildZip, canShareFiles, copyStack, saveBlob, shareFiles, stackFiles, TOO_BIG, zipFiles, type Stack } from './lib/render';
@@ -123,7 +125,8 @@ export default function App() {
         const img = await loadImg(url);
         let name = f.name;
         if (!name || /^image\.\w+$/.test(name)) name = `Pasted ${++pasteN}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
-        added.push({ id: ++seq, name, img, url, blob: f, src, thumb: await makeThumb(img, url) });
+        const located = !!readMeta(new Uint8Array(await f.slice(0, 512 * 1024).arrayBuffer())).gps;
+        added.push({ id: ++seq, name, img, url, blob: f, src, thumb: await makeThumb(img, url), located });
       } catch {
         show('Could not read ' + (f.name || 'that image'), { err: true });
       }
@@ -338,6 +341,7 @@ export default function App() {
     { key: 'stack', label: 'Stacker', href: '#/', active: route === 'stack' },
     { key: 'fit', label: 'Fit to size', href: '#/fit', active: route === 'fit' },
     { key: 'signature', label: 'Signature', href: '#/signature', active: route === 'signature' },
+    { key: 'safe', label: 'Safe to share', href: '#/safe', active: route === 'safe' },
   ];
   const onInstall = canInstall
     ? async () => { if ((await install()) === 'ios') show('On iPhone or iPad: tap Share, then Add to Home Screen.', { keep: false }); }
@@ -362,7 +366,8 @@ export default function App() {
       />
     )}
     {route === 'fit' ? <FitTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'signature' ? <SignatureTool intakeRef={intake} toast={toast} show={show} /> : (
+      : route === 'signature' ? <SignatureTool intakeRef={intake} toast={toast} show={show} />
+      : route === 'safe' ? <SafeTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 
@@ -389,6 +394,12 @@ export default function App() {
                   </button>
                 </div>
               </div>
+              {items.some(it => it.located) && (
+                <div className="sample">
+                  {(n => (n === 1 ? '1 photo here has its' : `${n} photos here have their`))(items.filter(it => it.located).length)} location saved. Your stacked images never include it.{' '}
+                  <a href="#/safe">Clean the originals</a>
+                </div>
+              )}
               {isSample && <div className="sample">These two are examples. They disappear when you add your own images.</div>}
               <ImageList
                 items={items}

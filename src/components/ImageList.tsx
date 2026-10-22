@@ -68,6 +68,7 @@ export function ImageList({ items, tags, current, onMove, onRemove, onJump, onRe
                 {g && <span className="gtag">→ image {g.map(x => x + 1).join(', ')}</span>}
                 {imgW(it)}×{imgH(it)}
                 {it.redact?.length ? <span className="htag"> · {it.redact.length} hidden</span> : null}
+                {it.located ? <span className="ltag" title="The original photo has its location saved. Stacked images never include it."> · location</span> : null}
               </div>
             </div>
             <div className="acts">

@@ -20,6 +20,8 @@ export interface Item {
   redact?: Redaction[];
   /** Small copy for the image list, so long lists don't decode every full-size image. */
   thumb?: string;
+  /** The original file has a GPS location saved in it (exports never carry it). */
+  located?: boolean;
 }
 
 export type WidthMode = 'widest' | 'narrowest' | 'original';

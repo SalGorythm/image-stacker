@@ -10,6 +10,7 @@ import { CardsTool } from './tools/CardsTool';
 import { ConvertTool } from './tools/ConvertTool';
 import { PhotoTool } from './tools/PhotoTool';
 import { QrTool } from './tools/QrTool';
+import { TextTool } from './tools/TextTool';
 import { SafeTool } from './tools/SafeTool';
 import { ScanTool } from './tools/ScanTool';
 import { SignatureTool } from './tools/SignatureTool';
@@ -355,6 +356,7 @@ export default function App() {
     { key: 'safe', label: 'Safe to share', href: '#/safe', active: route === 'safe' },
     { key: 'cards', label: 'Cards', href: '#/cards', active: route === 'cards' },
     { key: 'qr', label: 'QR codes', href: '#/qr', active: route === 'qr' },
+    { key: 'text', label: 'Copy text', href: '#/text', active: route === 'text' },
     { key: 'convert', label: 'Convert', href: '#/convert', active: route === 'convert' },
   ];
   const onInstall = canInstall
@@ -386,7 +388,8 @@ export default function App() {
       : route === 'cards' ? <CardsTool toast={toast} show={show} />
       : route === 'scan' ? <ScanTool intakeRef={intake} toast={toast} show={show} />
       : route === 'photo' ? <PhotoTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'qr' ? <QrTool toast={toast} show={show} /> : (
+      : route === 'qr' ? <QrTool toast={toast} show={show} />
+      : route === 'text' ? <TextTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

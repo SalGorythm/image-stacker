@@ -3,6 +3,7 @@ import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
 import { fitImage, kb, type FitResult } from '../lib/fitImage';
 import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages, cantOpen } from '../lib/files';
+import { handoff } from '../lib/handoff';
 import { normaliseFiles } from '../lib/heic';
 import { backgroundCheck, coverView, guides, ID_SPECS, placeFace, printSheet, type IdSpec, type View } from '../lib/idphoto';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
@@ -84,6 +85,13 @@ export function PhotoTool({ intakeRef, toast, show }: Props) {
     intakeRef.current = add;
     return () => { intakeRef.current = null; };
   });
+  // A cut-out on white handed over from Remove background
+  useEffect(() => {
+    if (!handoff.files.length) return;
+    const got = handoff.files;
+    handoff.files = [];
+    add(got);
+  }, []);
 
   // Switching country keeps the photo but reframes it to the new shape
   const switchSpec = (id: string) => {

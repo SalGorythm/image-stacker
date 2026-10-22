@@ -90,7 +90,10 @@ export function SiteFooter({ tools, sections, onInstall, onHelp }: Props) {
           {onInstall && <button className="nav-link" onClick={onInstall}>Install app</button>}
           <span className="foot-note">Works offline once it has loaded.</span>
           <span className="foot-note">
-            Opens iPhone HEIC photos with <a href="https://github.com/strukturag/libheif" target="_blank" rel="noreferrer">libheif</a> (LGPL-3.0), loaded only when needed.
+            Opens iPhone HEIC photos with <a href="https://github.com/strukturag/libheif" target="_blank" rel="noreferrer">libheif</a> (LGPL-3.0), reads text with{' '}
+            <a href="https://github.com/naptha/tesseract.js" target="_blank" rel="noreferrer">Tesseract.js</a> (Apache-2.0) and removes backgrounds with{' '}
+            <a href="https://github.com/xuebinqin/U-2-Net" target="_blank" rel="noreferrer">U²-Net</a> (Apache-2.0) on{' '}
+            <a href="https://onnxruntime.ai" target="_blank" rel="noreferrer">ONNX Runtime</a> (MIT), each loaded only when needed.
           </span>
         </nav>
         <nav className="foot-nav" aria-label="Stacker sections">

@@ -58,8 +58,8 @@ export function useToast() {
   return { toast, show, hide };
 }
 
-export type Route = 'stack' | 'fit' | 'signature' | 'safe' | 'convert' | 'cards' | 'scan' | 'photo' | 'qr' | 'text' | 'watermark';
-const ROUTES: Route[] = ['fit', 'signature', 'safe', 'convert', 'cards', 'scan', 'photo', 'qr', 'text', 'watermark'];
+export type Route = 'stack' | 'fit' | 'signature' | 'safe' | 'convert' | 'cards' | 'scan' | 'photo' | 'qr' | 'text' | 'watermark' | 'cutout';
+const ROUTES: Route[] = ['fit', 'signature', 'safe', 'convert', 'cards', 'scan', 'photo', 'qr', 'text', 'watermark', 'cutout'];
 const routeOf = (hash: string): Route => ROUTES.find(r => hash.startsWith('#/' + r)) ?? 'stack';
 
 /** Which tool is open, from the URL hash (#/ for the stacker, #/fit, …), so links and Back work. */

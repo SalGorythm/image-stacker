@@ -8,6 +8,7 @@ import { SiteFooter, SiteHeader, type NavItem, type ToolLink } from './component
 import { FitTool } from './tools/FitTool';
 import { CardsTool } from './tools/CardsTool';
 import { ConvertTool } from './tools/ConvertTool';
+import { CutoutTool } from './tools/CutoutTool';
 import { PhotoTool } from './tools/PhotoTool';
 import { QrTool } from './tools/QrTool';
 import { TextTool } from './tools/TextTool';
@@ -359,6 +360,7 @@ export default function App() {
     { key: 'qr', label: 'QR codes', href: '#/qr', active: route === 'qr' },
     { key: 'text', label: 'Copy text', href: '#/text', active: route === 'text' },
     { key: 'watermark', label: 'Watermark', href: '#/watermark', active: route === 'watermark' },
+    { key: 'cutout', label: 'Remove background', href: '#/cutout', active: route === 'cutout' },
     { key: 'convert', label: 'Convert', href: '#/convert', active: route === 'convert' },
   ];
   const onInstall = canInstall
@@ -392,7 +394,8 @@ export default function App() {
       : route === 'photo' ? <PhotoTool intakeRef={intake} toast={toast} show={show} />
       : route === 'qr' ? <QrTool toast={toast} show={show} />
       : route === 'text' ? <TextTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'watermark' ? <WatermarkTool intakeRef={intake} toast={toast} show={show} /> : (
+      : route === 'watermark' ? <WatermarkTool intakeRef={intake} toast={toast} show={show} />
+      : route === 'cutout' ? <CutoutTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "predev": "node scripts/copy-ocr.mjs",
-    "prebuild": "node scripts/copy-ocr.mjs"
+    "predev": "node scripts/copy-runtimes.mjs",
+    "prebuild": "node scripts/copy-runtimes.mjs"
   },
   "dependencies": {
     "@fontsource/amiri": "^5.3.0",
@@ -23,6 +23,7 @@
     "jspdf": "^4.2.1",
     "jszip": "^3.10.2",
     "libheif-js": "^1.23.5",
+    "onnxruntime-web": "^1.30.0",
     "pdfjs-dist": "^6.4.299",
     "qrcode-generator": "^2.0.4",
     "react": "^19.3.1",

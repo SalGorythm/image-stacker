@@ -9,6 +9,7 @@ import { FitTool } from './tools/FitTool';
 import { CardsTool } from './tools/CardsTool';
 import { ConvertTool } from './tools/ConvertTool';
 import { SafeTool } from './tools/SafeTool';
+import { ScanTool } from './tools/ScanTool';
 import { SignatureTool } from './tools/SignatureTool';
 import { Preview } from './components/Preview';
 import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
@@ -344,6 +345,7 @@ export default function App() {
   const tools: ToolLink[] = [
     { key: 'stack', label: 'Stacker', href: '#/', active: route === 'stack' },
     { key: 'fit', label: 'Fit to size', href: '#/fit', active: route === 'fit' },
+    { key: 'scan', label: 'Scan', href: '#/scan', active: route === 'scan' },
     { key: 'signature', label: 'Signature', href: '#/signature', active: route === 'signature' },
     { key: 'safe', label: 'Safe to share', href: '#/safe', active: route === 'safe' },
     { key: 'cards', label: 'Cards', href: '#/cards', active: route === 'cards' },
@@ -375,7 +377,8 @@ export default function App() {
       : route === 'signature' ? <SignatureTool intakeRef={intake} toast={toast} show={show} />
       : route === 'safe' ? <SafeTool intakeRef={intake} toast={toast} show={show} />
       : route === 'convert' ? <ConvertTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'cards' ? <CardsTool toast={toast} show={show} /> : (
+      : route === 'cards' ? <CardsTool toast={toast} show={show} />
+      : route === 'scan' ? <ScanTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

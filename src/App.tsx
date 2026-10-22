@@ -6,6 +6,7 @@ import { PagePicker } from './components/PagePicker';
 import { RedactEditor } from './components/RedactEditor';
 import { SiteFooter, SiteHeader, type NavItem, type ToolLink } from './components/Site';
 import { FitTool } from './tools/FitTool';
+import { CardsTool } from './tools/CardsTool';
 import { ConvertTool } from './tools/ConvertTool';
 import { SafeTool } from './tools/SafeTool';
 import { SignatureTool } from './tools/SignatureTool';
@@ -345,6 +346,7 @@ export default function App() {
     { key: 'fit', label: 'Fit to size', href: '#/fit', active: route === 'fit' },
     { key: 'signature', label: 'Signature', href: '#/signature', active: route === 'signature' },
     { key: 'safe', label: 'Safe to share', href: '#/safe', active: route === 'safe' },
+    { key: 'cards', label: 'Cards', href: '#/cards', active: route === 'cards' },
     { key: 'convert', label: 'Convert', href: '#/convert', active: route === 'convert' },
   ];
   const onInstall = canInstall
@@ -372,7 +374,8 @@ export default function App() {
     {route === 'fit' ? <FitTool intakeRef={intake} toast={toast} show={show} />
       : route === 'signature' ? <SignatureTool intakeRef={intake} toast={toast} show={show} />
       : route === 'safe' ? <SafeTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'convert' ? <ConvertTool intakeRef={intake} toast={toast} show={show} /> : (
+      : route === 'convert' ? <ConvertTool intakeRef={intake} toast={toast} show={show} />
+      : route === 'cards' ? <CardsTool toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

@@ -59,7 +59,7 @@ export function Preview(p: Props) {
       }
       x.restore();
     });
-  }, [L, s.gapColor, s.caption, s.numbers, s.watermark, s.slice, s.sliceWhole, p.meta]);
+  }, [L, s.gapColor, s.caption, s.numbers, s.watermark, s.slice, s.sliceWhole, s.captionFont, p.meta]);
 
   return (
     <section className="panel preview" id="export" aria-label="Preview">

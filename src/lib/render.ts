@@ -5,6 +5,7 @@ import { CANVAS_LIMITS, layout, type Layout } from './layout';
 import { renderPage } from './pdf';
 import { imgH, imgW, QUALITY_WIDTH, WHATSAPP_BOX, type Item, type Settings } from './types';
 import { applyRedactions } from './redact';
+import { ensureFont, textStyle, type ScriptFont } from './script';
 import { blankEdges, combine, NO_CROP, type Crop } from './trim';
 import { whatsappAdvice } from './whatsapp';
 
@@ -88,17 +89,25 @@ export function stackAdvice(list: Item[], s: Settings) {
 
 const FONT = '"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
 
-/** Writes text centred in a band, shrinking it to fit the width. */
-function bandText(x: CanvasRenderingContext2D, text: string, w: number, y: number, h: number, color: string) {
-  let fs = Math.round(h * 0.42);
-  x.font = `600 ${fs}px ${FONT}`;
+/**
+ * Writes text centred in a band, shrinking it to fit the width. Arabic-script text gets its own
+ * font and right-to-left direction; Nastaliq is set smaller because its letters reach so high and low.
+ */
+function bandText(x: CanvasRenderingContext2D, text: string, w: number, y: number, h: number, color: string, choice: ScriptFont) {
+  const st = textStyle(text, choice);
+  const weight = st.font ? 400 : 600;
+  let fs = Math.round((h * 0.42 * 1.3) / st.lineHeight);
+  const family = st.font ? st.family : FONT;
+  x.direction = st.rtl ? 'rtl' : 'ltr';
+  x.font = `${weight} ${fs}px ${family}`;
   const max = w * 0.92;
   const tw = x.measureText(text).width;
-  if (tw > max) { fs = Math.max(8, Math.floor((fs * max) / tw)); x.font = `600 ${fs}px ${FONT}`; }
+  if (tw > max) { fs = Math.max(8, Math.floor((fs * max) / tw)); x.font = `${weight} ${fs}px ${family}`; }
   x.fillStyle = color;
   x.textAlign = 'center';
   x.textBaseline = 'middle';
   x.fillText(text, w / 2, y + h / 2);
+  x.direction = 'ltr';
 }
 
 /** A rounded number badge in the top-left corner of an image. */
@@ -131,7 +140,9 @@ export async function paint(c: HTMLCanvasElement, L: StackLayout, s: Settings, h
   x.imageSmoothingQuality = 'high';
   const ink = textOn(s.gapColor);
   const caption = meta ? fillCaption(s.caption, meta) : s.caption.trim();
-  if (caption && L.headH) bandText(x, caption, L.width, 0, L.headH, ink);
+  // Arabic and Urdu fonts load on first use; canvas would silently fall back without waiting
+  await ensureFont(caption + ' ' + s.watermark, s.captionFont);
+  if (caption && L.headH) bandText(x, caption, L.width, 0, L.headH, ink, s.captionFont);
 
   for (const [k, p] of L.parts.entries()) {
     const cr = L.crops[k], keepW = 1 - cr.l - cr.r, keepH = 1 - cr.t - cr.b;
@@ -155,11 +166,13 @@ export async function paint(c: HTMLCanvasElement, L: StackLayout, s: Settings, h
     if (s.numbers && pos) badge(x, pos, left, top, Math.max(p.w, L.width / 2));
   }
 
-  if (caption && L.footH) bandText(x, caption, L.width, L.height - L.footH, L.footH, ink);
+  if (caption && L.footH) bandText(x, caption, L.width, L.height - L.footH, L.footH, ink, s.captionFont);
   const mark = s.watermark.trim();
   if (mark) {
-    const fs = Math.max(10, Math.round(L.width * 0.02));
-    x.font = `500 ${fs}px ${FONT}`;
+    const st = textStyle(mark, s.captionFont);
+    const fs = Math.max(10, Math.round((L.width * 0.02 * 1.3) / st.lineHeight));
+    x.font = `${st.font ? 400 : 500} ${fs}px ${st.font ? st.family : FONT}`;
+    x.direction = 'ltr';
     x.textAlign = 'right';
     x.textBaseline = 'bottom';
     const mx = L.width - fs, my = L.height - L.footH - fs * 0.7;

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { readSizes } from '../lib/groups';
+import { hasArabicScript, type ScriptFont } from '../lib/script';
 import type { GroupMode, Settings, Tail, WidthMode } from '../lib/types';
 
 interface Props {
@@ -233,6 +234,7 @@ export function CaptionSettings({ s, update }: Props) {
           <input
             type="text"
             id="caption"
+            dir="auto"
             placeholder="e.g. Answers {range}"
             value={s.caption}
             maxLength={120}
@@ -251,12 +253,24 @@ export function CaptionSettings({ s, update }: Props) {
         <input
           type="text"
           id="watermark"
+          dir="auto"
           placeholder="Optional, bottom-right corner"
           value={s.watermark}
           maxLength={60}
           onChange={e => update({ watermark: e.target.value })}
         />
       </div>
+      {hasArabicScript(s.caption + s.watermark) && (
+        <div className="settings">
+          <label htmlFor="cap-font">Font</label>
+          <select id="cap-font" value={s.captionFont} onChange={e => update({ captionFont: e.target.value as ScriptFont })}>
+            <option value="auto">Automatic (Nastaliq for Urdu, Naskh for Arabic)</option>
+            <option value="nastaliq">Nastaliq</option>
+            <option value="naskh">Naskh</option>
+            <option value="amiri">Amiri (classical)</option>
+          </select>
+        </div>
+      )}
       <label className="check">
         <input type="checkbox" checked={s.numbers} onChange={e => update({ numbers: e.target.checked })} />
         Number each image by its place in the list

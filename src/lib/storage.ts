@@ -72,6 +72,7 @@ const OPTIONS: Partial<Record<keyof Settings, readonly string[]>> = {
   captionPos: ['top', 'bottom'],
   arrange: ['vertical', 'horizontal', 'grid'],
   slice: ['off', 'portrait', 'square'],
+  captionFont: ['auto', 'naskh', 'nastaliq', 'amiri'],
 };
 
 /** Reads saved settings, including the older single-file version's format (gsize as "4,3,5"). */

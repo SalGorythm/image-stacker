@@ -25,7 +25,9 @@ export function fillCaption(tpl: string, m: Pick<StackMeta, 'label' | 'index' | 
     n: String(m.index + 1),
     total: String(m.total),
   };
-  return tpl.replace(/\{(\w+)\}/g, (all, k: string) => values[k.toLowerCase()] ?? all).trim();
+  // In Arabic-script captions, keep inserted numbers left to right ("18-27" must not show as "27-18")
+  const iso = /[\u0600-\u06FF]/.test(tpl) ? (v: string) => `\u2066${v}\u2069` : (v: string) => v;
+  return tpl.replace(/\{(\w+)\}/g, (all, k: string) => (values[k.toLowerCase()] != null ? iso(values[k.toLowerCase()]) : all)).trim();
 }
 
 /** Dark text on light gaps, white text on dark ones. */

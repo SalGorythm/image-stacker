@@ -1,4 +1,5 @@
 import type { Redaction } from './redact';
+import type { ScriptFont } from './script';
 
 /** A page of an imported PDF, kept so HD exports can re-render it sharply. */
 export interface PdfSrc {
@@ -60,6 +61,8 @@ export interface Settings {
   slice: 'off' | 'portrait' | 'square';
   /** Cut between images rather than through them. */
   sliceWhole: boolean;
+  /** Font for Arabic-script captions and watermarks ('auto': Nastaliq for Urdu, Naskh for Arabic). */
+  captionFont: ScriptFont;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -84,6 +87,7 @@ export const DEFAULT_SETTINGS: Settings = {
   columns: 2,
   slice: 'off',
   sliceWhole: true,
+  captionFont: 'auto',
 };
 
 /** Target width for PDF pages at each quality (0 = as stored). */

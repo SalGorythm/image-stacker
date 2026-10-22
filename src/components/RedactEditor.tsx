@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { applyRedactions, fromDrag, type Rect, type Redaction } from '../lib/redact';
 import { imgH, imgW, type Item } from '../lib/types';
 
+type NativeFaceDetector = { detect(src: CanvasImageSource): Promise<{ boundingBox: DOMRectReadOnly }[]> };
+const FaceDetector = (globalThis as unknown as { FaceDetector?: new (o?: object) => NativeFaceDetector }).FaceDetector;
+const LABEL = { phone: 'phone number', email: 'email', id: 'ID number', card: 'card number' } as const;
+
 interface Props {
   item: Item;
   onSave: (list: Redaction[]) => void;
@@ -16,6 +20,7 @@ export function RedactEditor({ item, onSave, onCancel }: Props) {
   const [kind, setKind] = useState<Redaction['kind']>('blur');
   const [sel, setSel] = useState<number | null>(null);
   const [draft, setDraft] = useState<Rect | null>(null);
+  const [finding, setFinding] = useState('');
   const cv = useRef<HTMLCanvasElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
 
@@ -64,6 +69,36 @@ export function RedactEditor({ item, onSave, onCancel }: Props) {
     return () => document.removeEventListener('keydown', key);
   }, [onCancel, sel]);
 
+  /**
+   * Reads the image on this device and adds a box over each phone number, email, ID or card number
+   * (and faces, where the browser can find them). Everything found can be removed again.
+   */
+  const findPrivate = async () => {
+    setFinding('Reading the text… (the first time downloads the reader, about 7 MB)');
+    try {
+      const [{ readText }, { findSensitive }] = await Promise.all([import('../lib/ocr'), import('../lib/sensitive')]);
+      const W = imgW(item), H = imgH(item);
+      const found = findSensitive((await readText(item.img, ['eng'], p => setFinding(`Reading the text… ${Math.round(p * 100)}%`))).words);
+      const boxes: (Rect & { what: string })[] = found.map(f => ({ x: f.box.x / W, y: f.box.y / H, w: f.box.w / W, h: f.box.h / H, what: LABEL[f.kind] }));
+      if (FaceDetector) {
+        try {
+          for (const fc of await new FaceDetector({ maxDetectedFaces: 20 }).detect(item.img)) {
+            const b = fc.boundingBox;
+            boxes.push({ x: b.x / W, y: b.y / H, w: b.width / W, h: b.height / H, what: 'face' });
+          }
+        } catch { /* faces are a bonus */ }
+      }
+      const fresh = boxes.filter(b => !list.some(r => Math.abs(r.x - b.x) < 0.01 && Math.abs(r.y - b.y) < 0.01));
+      setList(l => [...l, ...fresh.map(({ x, y, w, h }) => ({ x, y, w, h, kind }))]);
+      const counts = fresh.reduce<Record<string, number>>((m, b) => ({ ...m, [b.what]: (m[b.what] ?? 0) + 1 }), {});
+      setFinding(fresh.length
+        ? `Added ${Object.entries(counts).map(([k, n]) => `${n} ${k}${n > 1 ? 's' : ''}`).join(', ')}. Check them, and drag over anything missed.`
+        : `Nothing found automatically. Drag over anything private.${FaceDetector ? '' : ' (Faces can only be found automatically in some browsers.)'}`);
+    } catch {
+      setFinding('Could not read the text in this image. Drag over private details by hand.');
+    }
+  };
+
   const at = (e: React.PointerEvent) => {
     const b = cv.current!.getBoundingClientRect();
     return { x: (e.clientX - b.left) / b.width, y: (e.clientY - b.top) / b.height };
@@ -109,7 +144,9 @@ export function RedactEditor({ item, onSave, onCancel }: Props) {
           {list.length > 0 && (
             <button type="button" className="btn sm" onClick={() => { setList([]); setSel(null); }}>Clear all</button>
           )}
+          <button type="button" className="btn sm primary" onClick={findPrivate} disabled={finding.startsWith('Reading')}>Find private details</button>
         </div>
+        {finding && <p className="hint" role="status">{finding}</p>}
         <div className="redact-stage">
           <canvas
             ref={cv}

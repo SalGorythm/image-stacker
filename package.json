@@ -8,19 +8,26 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "predev": "node scripts/copy-ocr.mjs",
+    "prebuild": "node scripts/copy-ocr.mjs"
   },
   "dependencies": {
     "@fontsource/amiri": "^5.3.0",
     "@fontsource/noto-naskh-arabic": "^5.3.0",
     "@fontsource/noto-nastaliq-urdu": "^5.3.0",
+    "@tesseract.js-data/ara": "^1.0.0",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/hin": "^1.0.0",
+    "@tesseract.js-data/urd": "^1.0.0",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.2",
     "libheif-js": "^1.23.5",
     "pdfjs-dist": "^6.4.299",
     "qrcode-generator": "^2.0.4",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

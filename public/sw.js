@@ -1,6 +1,6 @@
 // Service worker: makes the app installable, works offline after the first visit,
 // and receives files shared into the installed app (Android share sheet).
-const APP = 'app-v1';
+const APP = 'app-v2'; // bump when /ocr files change: they are cached by path
 const SHARED = 'shared-files';
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -34,7 +34,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
   // Hashed build assets never change: cache first. Pages: network first, cached copy offline.
-  if (url.pathname.startsWith('/assets/')) {
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/ocr/')) {
     e.respondWith(caches.open(APP).then(async c => {
       const hit = await c.match(e.request);
       if (hit) return hit;

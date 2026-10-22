@@ -89,6 +89,9 @@ export function SiteFooter({ tools, sections, onInstall, onHelp }: Props) {
           <button className="nav-link" onClick={onHelp}>How it works</button>
           {onInstall && <button className="nav-link" onClick={onInstall}>Install app</button>}
           <span className="foot-note">Works offline once it has loaded.</span>
+          <span className="foot-note">
+            Opens iPhone HEIC photos with <a href="https://github.com/strukturag/libheif" target="_blank" rel="noreferrer">libheif</a> (LGPL-3.0), loaded only when needed.
+          </span>
         </nav>
         <nav className="foot-nav" aria-label="Stacker sections">
           <span className="label">Stacker</span>

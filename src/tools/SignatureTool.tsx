@@ -3,6 +3,7 @@ import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
 import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
 import { handoff } from '../lib/handoff';
+import { normaliseFiles } from '../lib/heic';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
 import { inkMask, renderSignature, type InkColour, type InkMask } from '../lib/signature';
 
@@ -31,7 +32,9 @@ export function SignatureTool({ intakeRef, toast, show }: Props) {
   const out = useRef<HTMLCanvasElement | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
-  const add = async (files: File[]) => {
+  const add = async (incoming: File[]) => {
+    const files = await normaliseFiles(incoming.slice(0, 1), n => show(`Opening ${n}…`, { keep: true }), n => show(`Could not open ${n}.`, { err: true }));
+    if (incoming.length > 1) files.push(...incoming.slice(1));
     const f = files.find(x => x.type.startsWith('image/'));
     if (!f) return show('Add a photo of the signature (JPG or PNG).', { err: true });
     const url = URL.createObjectURL(f);
@@ -118,7 +121,7 @@ export function SignatureTool({ intakeRef, toast, show }: Props) {
       </div>
       <div className="grid">
         <section className="panel" aria-label="Signature settings">
-          <DropZone flash={false} onFiles={add} onPasteClick={pasteClick} inputRef={input} what="a photo of a signature" accept="image/*" />
+          <DropZone flash={false} onFiles={add} onPasteClick={pasteClick} inputRef={input} what="a photo of a signature" accept="image/*,.heic,.heif" />
           <p className="hint">Sign on plain white paper with a dark pen, then photograph it flat in good light. Shadows are evened out for you.</p>
           <div className="section">
             <span className="label">Clean up</span>

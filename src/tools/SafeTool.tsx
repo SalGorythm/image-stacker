@@ -3,6 +3,7 @@ import { DropZone } from '../components/DropZone';
 import type { ToastOptions, ToastState } from '../hooks';
 import { readMeta, stripMeta, type PhotoMeta } from '../lib/exif';
 import { kb } from '../lib/fitImage';
+import { heicToJpeg, isHeic, isImageFile } from '../lib/heic';
 import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
 
@@ -18,6 +19,8 @@ interface Entry {
   thumb: string;
   meta: PhotoMeta;
   clean: File;
+  /** An iPhone HEIC photo: converted to JPG, so its hidden details could not be listed. */
+  heic: boolean;
   /** True when the format had to be re-saved as JPG (no lossless strip for it). */
   resaved: boolean;
 }
@@ -55,14 +58,22 @@ export function SafeTool({ intakeRef, toast, show }: Props) {
   const input = useRef<HTMLInputElement>(null);
 
   const add = async (files: File[]) => {
-    const imgs = files.filter(f => f.type.startsWith('image/'));
-    if (!imgs.length) return show('Add photos (JPG, PNG, WebP).', { err: true });
+    const imgs = files.filter(isImageFile);
+    if (!imgs.length) return show('Add photos (JPG, PNG, HEIC, WebP).', { err: true });
     const out: Entry[] = [];
     for (const f of imgs) {
       try {
+        if (isHeic(f)) {
+          // The JPG made from a HEIC carries no hidden data at all, so it is already the clean copy
+          show(`Opening ${f.name}…`, { keep: true });
+          const jpg = await heicToJpeg(f);
+          const clean = new File([jpg], jpg.name.replace(/\.jpg$/, '-clean.jpg'), { type: 'image/jpeg' });
+          out.push({ id: ++seq, file: f, thumb: URL.createObjectURL(jpg), meta: { extras: [] }, clean, resaved: true, heic: true });
+          continue;
+        }
         const meta = readMeta(new Uint8Array(await f.slice(0, 512 * 1024).arrayBuffer()));
         const { clean, resaved } = await cleanCopy(f, meta);
-        out.push({ id: ++seq, file: f, thumb: URL.createObjectURL(f), meta, clean, resaved });
+        out.push({ id: ++seq, file: f, thumb: URL.createObjectURL(f), meta, clean, resaved, heic: false });
       } catch { show(`Could not read ${f.name || 'that photo'}.`, { err: true }); }
     }
     setEntries(prev => [...prev, ...out]);
@@ -104,7 +115,7 @@ export function SafeTool({ intakeRef, toast, show }: Props) {
       </div>
       <div className="grid">
         <section className="panel" aria-label="Add photos">
-          <DropZone flash={false} onFiles={add} onPasteClick={pasteClick} inputRef={input} what="photos" accept="image/*" />
+          <DropZone flash={false} onFiles={add} onPasteClick={pasteClick} inputRef={input} what="photos" accept="image/*,.heic,.heif" />
           <div className="section">
             <span className="label">When this matters</span>
             <ul className="tips">
@@ -130,7 +141,7 @@ export function SafeTool({ intakeRef, toast, show }: Props) {
                 <div className="meta">
                   <div className="name" title={e.file.name}>{e.file.name}</div>
                   <div className="facts">
-                    {e.meta.gps ? (
+                    {e.heic ? <span className="fact">iPhone HEIC photo: details not listed, the JPG copy has none</span> : e.meta.gps ? (
                       <span className="fact bad">
                         Location {fmt(e.meta.gps.lat)}, {fmt(e.meta.gps.lon)}{' '}
                         <a href={`https://www.openstreetmap.org/?mlat=${e.meta.gps.lat}&mlon=${e.meta.gps.lon}#map=16/${e.meta.gps.lat}/${e.meta.gps.lon}`} target="_blank" rel="noreferrer">see on map</a>

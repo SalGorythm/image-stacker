@@ -6,6 +6,7 @@ import { PagePicker } from './components/PagePicker';
 import { RedactEditor } from './components/RedactEditor';
 import { SiteFooter, SiteHeader, type NavItem, type ToolLink } from './components/Site';
 import { FitTool } from './tools/FitTool';
+import { ConvertTool } from './tools/ConvertTool';
 import { SafeTool } from './tools/SafeTool';
 import { SignatureTool } from './tools/SignatureTool';
 import { Preview } from './components/Preview';
@@ -16,6 +17,7 @@ import {
   fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles, makeThumb,
 } from './lib/files';
 import { readMeta } from './lib/exif';
+import { normaliseFiles } from './lib/heic';
 import { computeGroups } from './lib/groups';
 import { dropPdf, isDeck, isPdf, openPdf, pdfPages, type PdfInfo } from './lib/pdf';
 import { buildPdf, buildZip, canShareFiles, copyStack, saveBlob, shareFiles, stackFiles, TOO_BIG, zipFiles, type Stack } from './lib/render';
@@ -99,7 +101,8 @@ export default function App() {
   const askPages = (info: PdfInfo) =>
     new Promise<number[] | null>(resolve => setPicking({ info, done: pages => { setPicking(null); resolve(pages); } }));
 
-  const addFiles = useEvent(async (files: File[]) => {
+  const addFiles = useEvent(async (incoming: File[]) => {
+    const files = await normaliseFiles(incoming, n => show(`Opening ${n}…`, { keep: true }), n => show(`Could not open ${n}. Is it a valid photo?`, { err: true }));
     const queue: { file: File; src?: PdfSrc }[] = [];
     for (const f of files) {
       if (isPdf(f)) {
@@ -342,6 +345,7 @@ export default function App() {
     { key: 'fit', label: 'Fit to size', href: '#/fit', active: route === 'fit' },
     { key: 'signature', label: 'Signature', href: '#/signature', active: route === 'signature' },
     { key: 'safe', label: 'Safe to share', href: '#/safe', active: route === 'safe' },
+    { key: 'convert', label: 'Convert', href: '#/convert', active: route === 'convert' },
   ];
   const onInstall = canInstall
     ? async () => { if ((await install()) === 'ios') show('On iPhone or iPad: tap Share, then Add to Home Screen.', { keep: false }); }
@@ -367,7 +371,8 @@ export default function App() {
     )}
     {route === 'fit' ? <FitTool intakeRef={intake} toast={toast} show={show} />
       : route === 'signature' ? <SignatureTool intakeRef={intake} toast={toast} show={show} />
-      : route === 'safe' ? <SafeTool intakeRef={intake} toast={toast} show={show} /> : (
+      : route === 'safe' ? <SafeTool intakeRef={intake} toast={toast} show={show} />
+      : route === 'convert' ? <ConvertTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

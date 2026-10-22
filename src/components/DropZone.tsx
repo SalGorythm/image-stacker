@@ -14,7 +14,7 @@ interface Props {
 }
 
 // Dropping files is handled page-wide in App; this only shows the highlight.
-export function DropZone({ flash, onFiles, onPasteClick, inputRef: input, what = 'images or a PDF', accept = 'image/*,application/pdf,.pdf' }: Props) {
+export function DropZone({ flash, onFiles, onPasteClick, inputRef: input, what = 'images or a PDF', accept = 'image/*,.heic,.heif,application/pdf,.pdf' }: Props) {
   const [over, setOver] = useState(false);
   const enter = (e: React.DragEvent) => {
     if (drag.id != null) return;

@@ -5,6 +5,7 @@ import type { FitSpec } from '../lib/fit';
 import { fitImage, kb, type FitResult } from '../lib/fitImage';
 import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
 import { handoff } from '../lib/handoff';
+import { normaliseFiles } from '../lib/heic';
 import { PRESETS } from '../lib/presets';
 import { canShareFiles, saveBlob, zipFiles } from '../lib/render';
 
@@ -55,7 +56,8 @@ export function FitTool({ intakeRef, toast, show }: Props) {
     try { localStorage.setItem(SPEC_KEY, JSON.stringify({ spec, preset })); } catch { /* ignore */ }
   }, [spec, preset]);
 
-  const add = async (list: File[]) => {
+  const add = async (incoming: File[]) => {
+    const list = await normaliseFiles(incoming, n => show(`Opening ${n}…`, { keep: true }), n => show(`Could not open ${n}.`, { err: true }));
     const imgs = list.filter(f => f.type.startsWith('image/'));
     if (!imgs.length) return show('Those files are not images. Fit to size works on photos and scans (JPG, PNG, WebP).', { err: true });
     const out: Source[] = [];
@@ -147,7 +149,7 @@ export function FitTool({ intakeRef, toast, show }: Props) {
       </div>
       <div className="grid">
         <section className="panel" aria-label="Rules">
-          <DropZone flash={false} onFiles={add} onPasteClick={pasteClick} inputRef={input} what="photos or signatures" accept="image/*" />
+          <DropZone flash={false} onFiles={add} onPasteClick={pasteClick} inputRef={input} what="photos or signatures" accept="image/*,.heic,.heif" />
           <div className="section" id="fit-rules">
             <span className="label">The form's rules</span>
             <div className="settings">

@@ -60,7 +60,7 @@ button,select,input[type=number],input[type=text]{font:inherit;color:inherit}
 .item img{width:56px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--line);background:var(--checker)}
 .meta{min-width:0}
 .name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dims{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.dims{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .acts{display:flex;gap:2px}
 .icon{border:0;background:none;cursor:pointer;color:var(--muted);width:26px;height:26px;border-radius:5px;font-size:14px}
 .icon:hover{background:var(--accent-soft);color:var(--fg)}
@@ -80,7 +80,10 @@ input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-rad
 .placeholder{color:var(--muted);text-align:center;padding:64px 16px}
 .export{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .export #fname{flex:1 1 140px;width:auto}
-.export #fmt{flex:0 0 auto}
+.export #fmt,.export #quality{flex:0 0 auto;width:auto}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover{border-color:var(--danger)}
+.toast-act{border:0;background:none;color:inherit;font:inherit;font-weight:600;text-decoration:underline;cursor:pointer;padding:0 0 0 10px}
 .stat{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .toast{min-height:18px;font-size:13px;color:var(--accent)}
 .toast.err{color:var(--danger)}
@@ -127,7 +130,7 @@ button.num:hover{color:var(--accent);text-decoration:underline dotted}
 }
 @media (max-width:480px){
   .export .btn{flex:1 1 40%}
-  .export #fmt{flex:1 1 auto}
+  .export #fmt,.export #quality{flex:1 1 40%}
   .settings{grid-template-columns:68px minmax(0,1fr)}
   header p{font-size:13px}
 }
@@ -195,7 +198,11 @@ button.num:hover{color:var(--accent);text-decoration:underline dotted}
             <option value="ranges">Custom ranges</option>
           </select>
           <label id="gsizeL">Per image</label>
-          <div class="sizes" id="gsizes"></div>
+          <div class="sizes" id="gsizes">
+            <span class="sizes" id="gsizeInputs"></span>
+            <button class="btn sm" id="gadd" title="Add another group size">+ Next</button>
+            <button class="btn sm danger" id="gremove" hidden></button>
+          </div>
           <input type="hidden" id="gsize" value="4">
           <label for="gtail" id="gtailL">After that</label>
           <select id="gtail">
@@ -216,16 +223,25 @@ button.num:hover{color:var(--accent);text-decoration:underline dotted}
           <button class="icon" id="gprev" aria-label="Previous group">‹</button>
           <span class="stat" id="gpos"></span>
           <button class="icon" id="gnext" aria-label="Next group">›</button>
+          <button class="icon del" id="gdel" aria-label="Remove this stack" title="Remove the images in this stack">✕</button>
         </div>
         <span class="stat" id="size"></span>
       </div>
       <div class="stage"><canvas id="cv" width="10" height="10"></canvas><p class="placeholder" id="ph" hidden>Add images and the stacked result shows up here.</p></div>
       <div class="export">
         <select id="fmt" aria-label="Format">
-          <option value="png">PNG (exact)</option>
-          <option value="jpg">JPG (smaller)</option>
+          <option value="png">PNG · lossless</option>
+          <option value="jpg">JPG · smaller</option>
+          <option value="pdf">PDF</option>
+        </select>
+        <select id="quality" aria-label="Quality" title="HD and 4K re-render PDF pages at that width, so text stays sharp. Photos and screenshots are kept at their full original size.">
+          <option value="hd">HD · 2560px</option>
+          <option value="4k">4K · 3840px</option>
+          <option value="std">Standard</option>
         </select>
         <input type="text" id="fname" value="stacked" aria-label="File name">
+      </div>
+      <div class="export">
         <button class="btn primary" id="save">Download</button>
         <button class="btn" id="copy">Copy</button>
         <button class="btn primary" id="zip" hidden>Download all (ZIP)</button>
@@ -237,15 +253,29 @@ button.num:hover{color:var(--accent);text-decoration:underline dotted}
 
 <script>
 const $=id=>document.getElementById(id);
-let items=[]; let seq=0; let pasteN=0; let isSample=true; let cur=0;
-const cv=$('cv'), ctx=cv.getContext('2d');
+let items=[], seq=0, pasteN=0, isSample=true, cur=0;
+// Imported PDFs: id → {name, blob}. Pages keep a reference so HD exports can re-render them sharply.
+const docs=new Map();
+const cv=$('cv');
 const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 const JSZIP='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+const JSPDF='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+const QUALITY={std:0,hd:2560,'4k':3840};
+const PREVIEW_W=1600; // width PDF pages are stored at for the list and preview
+// Browsers refuse to export canvases past these limits (Safari is much stricter on area)
+const isSafari=/^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+const MAX_SIDE=32000, MAX_AREA=isSafari?16e6:120e6;
+const TOO_BIG='The image is too large for this browser to export. Try fewer images per group, Standard quality, or JPG.';
 
-function toast(msg,err,keep){const t=$('toast');t.textContent=msg;t.className='toast'+(err?' err':'');clearTimeout(toast._t);if(!keep)toast._t=setTimeout(()=>t.textContent='',4000)}
+function toast(msg,err,keep,action){
+  const t=$('toast');t.replaceChildren(msg);t.className='toast'+(err?' err':'');
+  if(action){const b=document.createElement('button');b.className='toast-act';b.textContent=action.label;b.onclick=()=>{t.replaceChildren();action.fn()};t.append(b)}
+  clearTimeout(toast._t);if(!keep)toast._t=setTimeout(()=>t.replaceChildren(),action?8000:4000);
+}
 
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
-function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Could not load '+src));document.head.appendChild(s)})}
+const scripts={};
+function loadScript(src){return scripts[src]||(scripts[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete scripts[src];rej(new Error('Could not load '+src))};document.head.appendChild(s)}))}
 function canvasBlob(c,type,q){return new Promise(r=>c.toBlob(r,type,q))}
 function saveBlob(blob,name){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
@@ -264,43 +294,62 @@ let saveT;
 function persist(){
   if(isSample)return;
   clearTimeout(saveT);
-  saveT=setTimeout(()=>DB.set('state',{items:items.map(it=>({id:it.id,name:it.name,blob:it.blob})),seq,pasteN})
-    .catch(()=>toast('Could not save images for next time. Browser storage may be full.',true)),300);
+  saveT=setTimeout(()=>{
+    const used=new Set(items.map(it=>it.src?.doc).filter(Boolean));
+    DB.set('state',{
+      items:items.map(it=>({id:it.id,name:it.name,blob:it.blob,src:it.src})),
+      docs:[...docs].filter(([id])=>used.has(id)).map(([id,d])=>({id,name:d.name,blob:d.blob})),
+      seq,pasteN,
+    }).catch(()=>toast('Could not save images for next time. Browser storage may be full.',true));
+  },300);
 }
 async function restore(){
   try{
     const s=await DB.get('state');
     if(s&&s.items&&s.items.length){
+      (s.docs||[]).forEach(d=>docs.set(d.id,{name:d.name,blob:d.blob}));
       const out=[];
-      for(const r of s.items){try{const url=URL.createObjectURL(r.blob);out.push({id:r.id,name:r.name,blob:r.blob,url,img:await loadImg(url)})}catch(e){}}
+      for(const r of s.items){try{const url=URL.createObjectURL(r.blob);out.push({id:r.id,name:r.name,blob:r.blob,src:r.src,url,img:await loadImg(url)})}catch(e){}}
       if(out.length){items=out;seq=s.seq||0;pasteN=s.pasteN||0;isSample=false;render();toast(`Restored ${out.length} image${out.length>1?'s':''} from last time.`);return}
     }
   }catch(e){}
   initSample();render();
 }
 
-// PDF pages become one image each (pdf.js is loaded only when a PDF arrives)
+// PDF support (pdf.js is loaded only when a PDF arrives)
 let pdfjsP;
 function pdfjs(){
   return pdfjsP||(pdfjsP=loadScript(PDFJS+'pdf.min.js').then(()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';return pdfjsLib}).catch(e=>{pdfjsP=null;throw e}));
 }
-async function pdfToFiles(f){
-  const lib=await pdfjs();
-  const doc=await lib.getDocument({data:await f.arrayBuffer()}).promise;
+const docCache=new Map();
+function openDoc(id){
+  if(!docCache.has(id))docCache.set(id,(async()=>{
+    const lib=await pdfjs(), d=docs.get(id);
+    if(!d)throw new Error('PDF source missing');
+    return lib.getDocument({data:new Uint8Array(await d.blob.arrayBuffer())}).promise;
+  })().catch(e=>{docCache.delete(id);throw e}));
+  return docCache.get(id);
+}
+async function renderPage(src,width){
+  const doc=await openDoc(src.doc), page=await doc.getPage(src.page);
+  const vp=page.getViewport({scale:width/page.getViewport({scale:1}).width});
+  const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:x,viewport:vp}).promise;
+  page.cleanup();
+  return c;
+}
+async function pdfPages(f){
+  const id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  docs.set(id,{name:f.name,blob:f});
+  const doc=await openDoc(id).catch(e=>{docs.delete(id);throw e});
   const base=f.name.replace(/\.pdf$/i,''), pad=String(doc.numPages).length, out=[];
   for(let n=1;n<=doc.numPages;n++){
     toast(`Reading ${f.name}: page ${n} of ${doc.numPages}…`,false,true);
-    const page=await doc.getPage(n);
-    const scale=Math.min(3,Math.max(1,1600/page.getViewport({scale:1}).width));
-    const vp=page.getViewport({scale});
-    const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
-    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
-    await page.render({canvasContext:x,viewport:vp}).promise;
-    const blob=await canvasBlob(c,'image/png');
-    out.push(new File([blob],`${base} - ${String(n).padStart(pad,'0')}.png`,{type:'image/png'}));
-    page.cleanup();
+    const c=await renderPage({doc:id,page:n},PREVIEW_W);
+    const blob=await canvasBlob(c,'image/png');c.width=c.height=0;
+    out.push({file:new File([blob],`${base} - ${String(n).padStart(pad,'0')}.png`,{type:'image/png'}),src:{doc:id,page:n}});
   }
-  doc.destroy();
   return out;
 }
 const isPdf=f=>f.type==='application/pdf'||/\.pdf$/i.test(f.name);
@@ -310,8 +359,8 @@ async function addFiles(files){
   files=[...files];
   const queue=[];
   for(const f of files){
-    if(isPdf(f)){try{queue.push(...await pdfToFiles(f))}catch(e){toast('Could not read '+f.name+'. Is it a valid PDF?',true)}}
-    else if(f.type.startsWith('image/'))queue.push(f);
+    if(isPdf(f)){try{queue.push(...await pdfPages(f))}catch(e){toast('Could not read '+f.name+'. Is it a valid PDF?',true)}}
+    else if(f.type.startsWith('image/'))queue.push({file:f});
   }
   if(!queue.length){
     if(files.some(isDeck))toast('Export the presentation as PDF first (File → Export → PDF), then drop the PDF here.',true);
@@ -320,13 +369,13 @@ async function addFiles(files){
   }
   if(isSample){items=[];isSample=false}
   let added=0;
-  for(const f of queue){
+  for(const {file:f,src} of queue){
     try{
       const url=URL.createObjectURL(f);
       const img=await loadImg(url);
       let name=f.name;
       if(!name||/^image\.\w+$/.test(name)){pasteN++;name='Pasted '+pasteN+'.'+((f.type.split('/')[1]||'png').replace('jpeg','jpg'))}
-      items.push({id:++seq,name,img,url,blob:f});added++;
+      items.push({id:++seq,name,img,url,blob:f,src});added++;
     }catch(e){toast('Could not read '+(f.name||'that image'),true)}
   }
   render();
@@ -334,6 +383,18 @@ async function addFiles(files){
     toast(`Added ${added} image${added>1?'s':''}.`+(files.some(isDeck)?' (Presentations need exporting to PDF first.)':''));
     const d=$('drop');d.classList.add('flash');setTimeout(()=>d.classList.remove('flash'),400);
   }
+}
+
+// Removing is instant; the toast offers Undo instead of asking first
+function removeItems(ids,msg){
+  const before=items.slice();
+  items=items.filter(it=>!ids.has(it.id));render();
+  toast(msg,false,false,{label:'Undo',fn:()=>{items=before;isSample=false;render();toast('Restored.')}});
+}
+function removeStack(){
+  const {groups}=computeGroups(), g=groups[cur];
+  if(!g||groups.length<2)return;
+  removeItems(new Set(g.list.map(it=>it.id)),`Removed stack ${cur+1} (${g.list.length} image${g.list.length>1?'s':''}).`);
 }
 
 const isMac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent);
@@ -441,7 +502,10 @@ function render(){
     };
     li.querySelector('.up').onclick=()=>move(i,i-1);
     li.querySelector('.down').onclick=()=>move(i,i+1);
-    li.querySelector('.del').onclick=()=>{if(it.url.startsWith('blob:'))URL.revokeObjectURL(it.url);items.splice(i,1);render()};
+    li.querySelector('.del').onclick=()=>{
+      if(isSample){items.splice(i,1);render();return}
+      removeItems(new Set([it.id]),`Removed ${it.name}.`);
+    };
     li.addEventListener('dragstart',e=>{dragId=it.id;li.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x')});
     li.addEventListener('dragend',()=>{dragId=null;li.classList.remove('dragging');document.querySelectorAll('.target').forEach(n=>n.classList.remove('target'))});
     li.addEventListener('dragover',e=>{if(dragId==null)return;e.preventDefault();li.classList.add('target')});
@@ -453,7 +517,11 @@ function render(){
   $('gnav').hidden=!multi;
   $('gpos').textContent=multi?`Image ${cur+1} of ${groups.length} · #${groups[cur].label}`:'';
   $('gprev').disabled=cur<=0;$('gnext').disabled=cur>=groups.length-1;
-  $('zip').hidden=!multi;$('zip').textContent=`Download all ${groups.length} (ZIP)`;
+  const n=groups[cur]?.list.length||0;
+  $('gremove').hidden=!multi;
+  $('gremove').textContent=`Remove stack ${cur+1} (${n})`;
+  $('gremove').title=`Remove the ${n} image${n>1?'s':''} in stack ${cur+1} (#${groups[cur]?.label}). You can undo.`;
+  $('zip').hidden=!multi;$('zip').textContent=`Download all ${groups.length} (${$('fmt').value==='pdf'?'PDF':'ZIP'})`;
   $('save').className='btn'+(multi?'':' primary');
   $('save').textContent=multi?'Download this one':'Download';
   draw(groups[cur]?.list||[]);
@@ -462,92 +530,139 @@ function render(){
 let dragId=null;
 function move(from,to){if(to<0||to>=items.length||from===to)return;const [x]=items.splice(from,1);items.splice(to,0,x);render()}
 
-function layout(list){
-  const gap=Math.max(0,+$('gap').value||0), mode=$('width').value;
+// Layout of one stack. q is the HD target width for PDF pages (0 = as stored).
+// Everything, gap included, is scaled together, then shrunk if it would pass the browser's canvas limits.
+function layout(list,q){
   if(!list.length)return null;
-  const ws=list.map(W);
-  const target=mode==='narrowest'?Math.min(...ws):Math.max(...ws);
-  const parts=list.map(it=>{
-    if(mode==='original')return {it,w:W(it),h:H(it)};
-    return {it,w:target,h:Math.round(H(it)*target/W(it))};
-  });
-  const width=mode==='original'?Math.max(...ws):target;
-  const height=parts.reduce((s,p)=>s+p.h,0)+gap*(parts.length-1);
-  return {parts,width,height,gap};
+  const mode=$('width').value, gap0=Math.max(0,+$('gap').value||0);
+  const build=hq=>{
+    const s=list.map(it=>{const w=hq&&it.src?Math.max(hq,W(it)):W(it);return {w,h:H(it)*w/W(it)}});
+    const ws=s.map(x=>x.w), target=mode==='narrowest'?Math.min(...ws):Math.max(...ws);
+    return {s,target,width:mode==='original'?Math.max(...ws):target};
+  };
+  const base=build(0), B=q?build(q):base;
+  const raw=B.s.map(x=>mode==='original'?x:{w:B.target,h:x.h*B.target/x.w});
+  let width=B.width, gap=gap0*B.width/base.width;
+  const tall=raw.reduce((t,p)=>t+p.h,0)+gap*(raw.length-1);
+  const fit=Math.min(1,MAX_SIDE/tall,MAX_SIDE/width,Math.sqrt(MAX_AREA/(width*tall)));
+  const parts=list.map((it,i)=>({it,w:Math.round(raw[i].w*fit),h:Math.round(raw[i].h*fit)}));
+  gap=Math.round(gap*fit);width=Math.round(width*fit);
+  return {parts,width,gap,height:parts.reduce((t,p)=>t+p.h,0)+gap*(parts.length-1),reduced:fit<1};
 }
-function paint(c,L){
-  const x=c.getContext('2d');
+// hq: re-render PDF pages at the size they're drawn instead of scaling the stored preview image
+async function paint(c,L,hq){
   c.width=L.width;c.height=L.height;
+  const x=c.getContext('2d');
   x.fillStyle=$('gapColor').value;x.fillRect(0,0,L.width,L.height);
-  x.imageSmoothingQuality='high';
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
   let y=0;
-  for(const p of L.parts){x.drawImage(p.it.img,Math.round((L.width-p.w)/2),y,p.w,p.h);y+=p.h+L.gap}
+  for(const p of L.parts){
+    let src=p.it.img;
+    if(hq&&p.it.src&&p.w>W(p.it)){try{src=await renderPage(p.it.src,p.w)}catch(e){}}
+    x.drawImage(src,Math.round((L.width-p.w)/2),y,p.w,p.h);
+    if(src!==p.it.img)src.width=src.height=0;
+    y+=p.h+L.gap;
+  }
 }
 
+function quality(){return QUALITY[$('quality').value]||0}
 let shown=[];
 function draw(list=shown){
   shown=list;
-  const L=layout(list);
-  const has=!!L;
-  $('save').disabled=!has;$('copy').disabled=!has;
+  const L=layout(list,0), has=!!L;
+  $('save').disabled=!has;$('copy').disabled=!has;$('zip').disabled=!has;
   cv.hidden=!has;$('ph').hidden=has;
-  if(!L){cv.width=10;cv.height=10;ctx.clearRect(0,0,10,10);$('size').textContent='';return}
-  paint(cv,L);
-  $('size').textContent=`${L.width} × ${L.height} px`;
+  if(!L){cv.width=10;cv.height=10;$('size').textContent='';return}
+  paint(cv,L,false);
+  const E=layout(list,quality());
+  $('size').textContent=`${E.width} × ${E.height} px`+(E.reduced?' · reduced to fit browser limit':'');
+  $('size').title=list.some(it=>it.src)?'':'These images are exported at their full original size. HD and 4K sharpen pages imported from a PDF.';
 }
 
-function ext(){return $('fmt').value==='jpg'?'jpg':'png'}
-function exportBlob(c){
-  const jpg=ext()==='jpg';
-  return canvasBlob(c,jpg?'image/jpeg':'image/png',0.92);
+function fmt(){return $('fmt').value}
+function ext(){return fmt()==='jpg'?'jpg':fmt()==='pdf'?'pdf':'png'}
+async function renderExport(list){const c=document.createElement('canvas');await paint(c,layout(list,quality()),true);return c}
+async function imageBlob(list){
+  const c=await renderExport(list);
+  const b=fmt()==='png'?await canvasBlob(c,'image/png'):await canvasBlob(c,'image/jpeg',0.95);
+  c.width=c.height=0;
+  if(!b)throw new Error(TOO_BIG);
+  return b;
 }
-function baseName(){return ($('fname').value||'stacked').trim().replace(/\.(png|jpe?g|zip)$/i,'')||'stacked'}
-function groupFile(i,groups){
+// One page per stack, each page sized to its image (PDF pages max out at 14400pt)
+async function buildPdf(lists,progress){
+  await loadScript(JSPDF);
+  let pdf;
+  for(let i=0;i<lists.length;i++){
+    progress?.(i);
+    const c=await renderExport(lists[i]);
+    const blob=await canvasBlob(c,'image/jpeg',0.95);
+    if(!blob)throw new Error(TOO_BIG);
+    const k=Math.min(0.75,14400/Math.max(c.width,c.height)), pw=c.width*k, ph=c.height*k, o=pw>ph?'l':'p';
+    c.width=c.height=0;
+    if(!pdf)pdf=new window.jspdf.jsPDF({unit:'pt',format:[pw,ph],orientation:o,compress:true});
+    else pdf.addPage([pw,ph],o);
+    pdf.addImage(new Uint8Array(await blob.arrayBuffer()),'JPEG',0,0,pw,ph,undefined,'NONE');
+  }
+  return pdf.output('blob');
+}
+function baseName(){return ($('fname').value||'stacked').trim().replace(/\.(png|jpe?g|zip|pdf)$/i,'')||'stacked'}
+function fileName(i,groups){
   if(groups.length<2)return baseName()+'.'+ext();
   return `${baseName()}-${String(i+1).padStart(String(groups.length).length,'0')} (${groups[i].label}).${ext()}`;
 }
-const TOO_BIG='The image is too large for this browser to export. Try fewer images per group or JPG.';
-
-$('save').onclick=async()=>{
+async function busy(btn,fn){
   if(isSample){toast('Add your own images first. These are examples.',true);return}
-  const blob=await exportBlob(cv);
-  if(!blob){toast(TOO_BIG,true);return}
-  const {groups}=computeGroups(), name=groupFile(cur,groups);
-  saveBlob(blob,name);
-  toast('Saved '+name);
-};
-
-$('zip').onclick=async()=>{
-  if(isSample){toast('Add your own images first. These are examples.',true);return}
-  const btn=$('zip');btn.disabled=true;
-  try{
-    if(!window.JSZip)await loadScript(JSZIP);
-    const {groups}=computeGroups(), zip=new JSZip(), c=document.createElement('canvas');
-    for(let i=0;i<groups.length;i++){
-      toast(`Building image ${i+1} of ${groups.length}…`,false,true);
-      paint(c,layout(groups[i].list));
-      const blob=await exportBlob(c);
-      if(!blob)throw new Error(TOO_BIG);
-      zip.file(groupFile(i,groups),blob);
-    }
-    toast('Zipping…',false,true);
-    saveBlob(await zip.generateAsync({type:'blob'}),baseName()+'.zip');
-    toast(`Saved ${baseName()}.zip with ${groups.length} images.`);
-  }catch(e){toast(e.message===TOO_BIG?TOO_BIG:'Could not build the ZIP. Check your connection and try again.',true)}
+  btn.disabled=true;
+  try{await fn()}
+  catch(e){console.error(e);toast(e.message===TOO_BIG?TOO_BIG:'Export failed. Check your connection and try again.',true)}
   finally{btn.disabled=false}
-};
+}
 
-$('copy').onclick=async()=>{
-  if(isSample){toast('Add your own images first. These are examples.',true);return}
-  try{
-    const blob=await canvasBlob(cv,'image/png');
-    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
-    toast('Copied. Paste it into WhatsApp or anywhere else.');
-  }catch(e){toast('This browser blocked copying images. Use Download instead.',true)}
-};
+$('save').onclick=()=>busy($('save'),async()=>{
+  const {groups}=computeGroups(), list=groups[cur].list, name=fileName(cur,groups);
+  toast('Preparing…',false,true);
+  saveBlob(fmt()==='pdf'?await buildPdf([list]):await imageBlob(list),name);
+  toast('Saved '+name);
+});
+
+$('zip').onclick=()=>busy($('zip'),async()=>{
+  const {groups}=computeGroups(), n=groups.length;
+  if(fmt()==='pdf'){
+    const blob=await buildPdf(groups.map(g=>g.list),i=>toast(`Building page ${i+1} of ${n}…`,false,true));
+    saveBlob(blob,baseName()+'.pdf');toast(`Saved ${baseName()}.pdf with ${n} pages.`);
+    return;
+  }
+  await loadScript(JSZIP);
+  const zip=new JSZip();
+  for(let i=0;i<n;i++){
+    toast(`Building image ${i+1} of ${n}…`,false,true);
+    zip.file(fileName(i,groups),await imageBlob(groups[i].list));
+  }
+  toast('Zipping…',false,true);
+  saveBlob(await zip.generateAsync({type:'blob'}),baseName()+'.zip');
+  toast(`Saved ${baseName()}.zip with ${n} images.`);
+});
+
+// ClipboardItem gets a promise so the write starts inside the click (Safari requires that)
+$('copy').onclick=()=>busy($('copy'),async()=>{
+  const list=computeGroups().groups[cur].list;
+  const blob=renderExport(list).then(c=>canvasBlob(c,'image/png')).then(b=>b||Promise.reject(new Error(TOO_BIG)));
+  try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})])}
+  catch(e){toast(e.message===TOO_BIG?TOO_BIG:'This browser blocked copying images. Use Download instead.',true);return}
+  toast('Copied. Paste it into WhatsApp or anywhere else.');
+});
 
 $('gprev').onclick=()=>{cur--;render()};
 $('gnext').onclick=()=>{cur++;render()};
+$('gdel').onclick=removeStack;
+$('gremove').onclick=removeStack;
+// ← / → step through stacks when not typing
+document.addEventListener('keydown',e=>{
+  if($('gnav').hidden||e.metaKey||e.ctrlKey||e.altKey||e.target.closest?.('input,select,textarea'))return;
+  if(e.key==='ArrowLeft'&&cur>0){cur--;render()}
+  else if(e.key==='ArrowRight'&&!$('gnext').disabled){cur++;render()}
+});
 
 $('pick').onclick=()=>$('file').click();
 $('pasteBtn').onclick=pasteFromClipboard;
@@ -574,10 +689,11 @@ $('sort').onchange=e=>{
   e.target.value='';render();
 };
 $('clear').onclick=()=>{
-  if(!isSample&&items.length>3&&!confirm(`Remove all ${items.length} images?`))return;
-  items.forEach(it=>{if(it.url&&it.url.startsWith('blob:'))URL.revokeObjectURL(it.url)});items=[];isSample=false;cur=0;render();
+  if(isSample){items=[];isSample=false;render();return}
+  cur=0;removeItems(new Set(items.map(it=>it.id)),`Removed all ${items.length} images.`);
 };
-['gap','gapColor','width'].forEach(id=>$(id).addEventListener('input',()=>draw()));
+['gap','gapColor','width','quality'].forEach(id=>$(id).addEventListener('input',()=>draw()));
+$('fmt').addEventListener('change',()=>render());
 
 function syncGroupFields(){
   const m=$('gmode').value;
@@ -592,12 +708,12 @@ $('gtail').addEventListener('change',()=>{cur=0;render()});
 // "Every N" sizes: a row of number boxes (4, then 3, then 5…) mirrored into the hidden #gsize field
 function readSizes(){const v=$('gsize').value.split(',').map(x=>Math.floor(+x)||0).filter(x=>x>0);return v.length?v:[4]}
 function syncSizes(){
-  $('gsize').value=[...$('gsizes').querySelectorAll('input')].map(i=>i.value).join(',');
+  $('gsize').value=[...$('gsizeInputs').querySelectorAll('input')].map(i=>i.value).join(',');
   $('gsize').dispatchEvent(new Event('change'));
   syncGroupFields();render();
 }
 function buildSizes(focusLast){
-  const box=$('gsizes');box.innerHTML='';
+  const box=$('gsizeInputs');box.innerHTML='';
   readSizes().forEach((k,i)=>{
     const s=document.createElement('span');s.className='sz';
     s.innerHTML=(i?'<span class="hint">then</span>':'')+`<input type="number" min="1" max="999" aria-label="Group ${i+1} size">`+(i?'<button class="icon" aria-label="Remove this size">✕</button>':'');
@@ -605,16 +721,15 @@ function buildSizes(focusLast){
     if(i)s.querySelector('button').onclick=()=>{s.remove();syncSizes();buildSizes()};
     box.appendChild(s);
   });
-  const add=document.createElement('button');add.className='btn sm';add.textContent='+ Next';
-  add.title='Add another group size. The last size repeats for the remaining images.';
-  add.onclick=()=>{const s=readSizes();$('gsize').value=[...s,s.at(-1)].join(',');buildSizes(true);syncSizes()};
-  box.appendChild(add);
   if(focusLast){const all=box.querySelectorAll('input');all[all.length-1].select()}
 }
+$('gadd').onclick=()=>{const s=readSizes();$('gsize').value=[...s,s.at(-1)].join(',');buildSizes(true);syncSizes()};
 
-const SETTINGS=['gap','gapColor','width','fmt','gmode','gsize','gtail','granges'];
+const SETTINGS=['gap','gapColor','width','fmt','quality','gmode','gsize','gtail','granges'];
 try{const s=JSON.parse(localStorage.getItem('stacker-settings')||'{}');
   SETTINGS.forEach(k=>{if(s[k]!=null)$(k).value=s[k]})}catch(e){}
+// A stored value that no longer exists as an option (e.g. an old format) falls back to the default
+['fmt','quality','width','gmode','gtail'].forEach(k=>{if(!$(k).value)$(k).selectedIndex=0});
 SETTINGS.forEach(k=>$(k).addEventListener('change',()=>{
   try{localStorage.setItem('stacker-settings',JSON.stringify(Object.fromEntries(SETTINGS.map(k=>[k,$(k).value]))))}catch(e){}
 }));

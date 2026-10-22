@@ -2,6 +2,7 @@ import { CAPTION_RATIO, fillCaption, textOn, type StackMeta } from './captions';
 import { CANVAS_LIMITS, layout, type Layout } from './layout';
 import { renderPage } from './pdf';
 import { imgH, imgW, QUALITY_WIDTH, WHATSAPP_BOX, type Item, type Settings } from './types';
+import { applyRedactions } from './redact';
 import { blankEdges, combine, NO_CROP, type Crop } from './trim';
 import { whatsappAdvice } from './whatsapp';
 
@@ -105,6 +106,14 @@ export async function paint(c: HTMLCanvasElement, L: Layout<Item>, s: Settings, 
     const left = Math.round((L.width - p.w) / 2);
     x.drawImage(src, cr.l * sw, cr.t * sh, keepW * sw, keepH * sh, left, y, p.w, p.h);
     if (src !== p.it.img && src instanceof HTMLCanvasElement) src.width = src.height = 0;
+    // Hidden areas are stored in full-image fractions; map them through this image's trim to its tile
+    const top = y;
+    applyRedactions(x, p.it.redact, r => ({
+      x: left + ((r.x - cr.l) / keepW) * p.w,
+      y: top + ((r.y - cr.t) / keepH) * p.h,
+      w: (r.w / keepW) * p.w,
+      h: (r.h / keepH) * p.h,
+    }), { x: left, y: top, w: p.w, h: p.h });
     const pos = meta?.positions?.get(p.it.id);
     if (s.numbers && pos) badge(x, pos, left, y, L.width);
     y += p.h + L.gap;

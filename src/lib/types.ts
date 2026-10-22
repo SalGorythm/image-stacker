@@ -1,3 +1,5 @@
+import type { Redaction } from './redact';
+
 /** A page of an imported PDF, kept so HD exports can re-render it sharply. */
 export interface PdfSrc {
   doc: string;
@@ -14,6 +16,8 @@ export interface Item {
   /** Original bytes, persisted to IndexedDB. Samples have none. */
   blob?: Blob;
   src?: PdfSrc;
+  /** Areas hidden with blur, pixelate or a solid box. */
+  redact?: Redaction[];
 }
 
 export type WidthMode = 'widest' | 'narrowest' | 'original';

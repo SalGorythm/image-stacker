@@ -212,7 +212,6 @@ export function CaptionSettings({ s, update }: Props) {
           <select
             aria-label="Caption position"
             value={s.captionPos}
-            style={{ width: 'auto' }}
             onChange={e => update({ captionPos: e.target.value as Settings['captionPos'] })}
           >
             <option value="top">Above</option>

@@ -10,9 +10,10 @@ interface Props {
   onMove: (from: number, to: number) => void;
   onRemove: (it: Item) => void;
   onJump: (group: number) => void;
+  onRedact: (it: Item) => void;
 }
 
-export function ImageList({ items, tags, current, onMove, onRemove, onJump }: Props) {
+export function ImageList({ items, tags, current, onMove, onRemove, onJump, onRedact }: Props) {
   const [target, setTarget] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
 
@@ -66,9 +67,11 @@ export function ImageList({ items, tags, current, onMove, onRemove, onJump }: Pr
               <div className="dims">
                 {g && <span className="gtag">→ image {g.map(x => x + 1).join(', ')}</span>}
                 {imgW(it)}×{imgH(it)}
+                {it.redact?.length ? <span className="htag"> · {it.redact.length} hidden</span> : null}
               </div>
             </div>
             <div className="acts">
+              <button className="icon" aria-label="Blur or hide parts" title="Blur or hide parts" onClick={() => onRedact(it)}>◩</button>
               <button className="icon" aria-label="Move up" disabled={i === 0} onClick={() => onMove(i, i - 1)}>↑</button>
               <button className="icon" aria-label="Move down" disabled={i === items.length - 1} onClick={() => onMove(i, i + 1)}>↓</button>
               <button className="icon del" aria-label="Remove" onClick={() => onRemove(it)}>✕</button>

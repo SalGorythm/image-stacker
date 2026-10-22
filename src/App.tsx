@@ -3,6 +3,7 @@ import { DropZone } from './components/DropZone';
 import { ImageList } from './components/ImageList';
 import { Help } from './components/Help';
 import { PagePicker } from './components/PagePicker';
+import { RedactEditor } from './components/RedactEditor';
 import { SiteFooter, SiteHeader, type NavItem } from './components/Site';
 import { Preview } from './components/Preview';
 import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
@@ -268,6 +269,7 @@ export default function App() {
   // Header and footer navigation: each link takes you to its tool and briefly highlights it
   const fileInput = useRef<HTMLInputElement>(null);
   const [help, setHelp] = useState(false);
+  const [redacting, setRedacting] = useState<Item | null>(null);
   const { canInstall, install } = useInstall();
   const goTo = (id: string) => {
     const el = document.getElementById(id);
@@ -294,6 +296,13 @@ export default function App() {
     { key: 'trim', label: 'Trim', hint: 'Cut the edges of every image', run: () => goTo('trim') },
     { key: 'captions', label: 'Captions', hint: 'Caption, image numbers and watermark', run: () => goTo('captions') },
     {
+      key: 'blur', label: 'Blur', hint: 'Hide private details on an image',
+      run: () => {
+        if (isSample || !items.length) { goTo('add'); show('Add an image first, then use ◩ on its row to blur or hide parts.'); return; }
+        setRedacting(list[0] ?? items[0]);
+      },
+    },
+    {
       key: 'whatsapp', label: 'WhatsApp', hint: 'Keep stacks sharp after sending on WhatsApp',
       run: () => { update({ quality: 'whatsapp' }); goTo('export'); show('WhatsApp quality is on. Each stack now fits WhatsApp HD.'); },
     },
@@ -309,6 +318,18 @@ export default function App() {
     <SiteHeader nav={nav} onInstall={onInstall} onHelp={() => setHelp(true)} />
     {picking && <PagePicker info={picking.info} onDone={picking.done} />}
     {help && <Help onClose={() => setHelp(false)} />}
+    {redacting && (
+      <RedactEditor
+        item={redacting}
+        onCancel={() => setRedacting(null)}
+        onSave={list => {
+          const id = redacting.id;
+          setItems(prev => prev.map(it => (it.id === id ? { ...it, redact: list.length ? list : undefined } : it)));
+          setRedacting(null);
+          show(list.length ? `Hid ${list.length} area${list.length > 1 ? 's' : ''} on ${redacting.name}.` : `Nothing hidden on ${redacting.name}.`);
+        }}
+      />
+    )}
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 
@@ -343,6 +364,7 @@ export default function App() {
                 onMove={move}
                 onRemove={it => removeItems(new Set([it.id]), `Removed ${it.name}.`)}
                 onJump={setCur}
+                onRedact={setRedacting}
               />
             </div>
           )}

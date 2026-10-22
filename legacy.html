@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Image Stacker</title>
+<meta name="description" content="Stack images vertically in any order and download one combined image. Runs fully in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+/* Layout: controls column on the left, live preview on the right; stacks to one column on phones */
+:root{
+  --bg:#f3f4f2; --panel:#ffffff; --fg:#1d2420; --muted:#5d6862; --line:#d9ddd9;
+  --accent:#2f6b4f; --accent-fg:#ffffff; --accent-soft:#e3eee8; --danger:#a63d32;
+  --checker:#e7e9e6;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141816; --panel:#1c211e; --fg:#e4e8e5; --muted:#9aa49e; --line:#2f3632;
+  --accent:#6fbf96; --accent-fg:#0f1a14; --accent-soft:#22352b; --danger:#e27b6f; --checker:#232925;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141816; --panel:#1c211e; --fg:#e4e8e5; --muted:#9aa49e; --line:#2f3632;
+  --accent:#6fbf96; --accent-fg:#0f1a14; --accent-soft:#22352b; --danger:#e27b6f; --checker:#232925;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 16px;margin-bottom:16px}
+h1{font-size:22px;font-weight:600;margin:0;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:20px 12px;text-align:center;display:flex;flex-direction:column;gap:4px;align-items:center;transition:border-color .15s,background .15s}
+.drop.over,.drop.flash{border-color:var(--accent);background:var(--accent-soft)}
+.drop small{color:var(--muted)}
+.drop .row{justify-content:center;margin-top:8px}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--panel);color:var(--fg)}
+@media (hover:none){.kbd-hint{display:none}}
+button,select,input[type=number],input[type=text]{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:7px 12px;cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn:focus-visible,.icon:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:22px 26px 56px minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel);cursor:grab}
+.item.dragging{opacity:.4}
+.item.target{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.handle{color:var(--muted);font-size:16px;line-height:1;text-align:center;user-select:none}
+.num{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.item img{width:56px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--line);background:var(--checker)}
+.meta{min-width:0}
+.name{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dims{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acts{display:flex;gap:2px}
+.icon{border:0;background:none;cursor:pointer;color:var(--muted);width:26px;height:26px;border-radius:5px;font-size:14px}
+.icon:hover{background:var(--accent-soft);color:var(--fg)}
+.icon.del:hover{color:var(--danger)}
+.icon:disabled{opacity:.3;cursor:default;background:none}
+.section{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.settings{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px 12px;align-items:center}
+.settings label{color:var(--muted);font-size:13px}
+select,input[type=number],input[type=text]{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 8px;min-width:0;width:100%}
+.row select{width:auto}
+#sort{padding:3px 6px;font-size:13px}
+input[type=color]{width:42px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--bg);padding:2px}
+.inline{display:flex;gap:8px;align-items:center}
+.preview{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+.stage{background:var(--checker);border-radius:8px;padding:12px;max-height:72vh;overflow:auto;display:flex;justify-content:center;align-items:flex-start}
+.stage canvas{max-width:100%;height:auto;box-shadow:0 1px 6px rgba(0,0,0,.15)}
+.placeholder{color:var(--muted);text-align:center;padding:64px 16px}
+.export{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.export #fname{flex:1 1 140px;width:auto}
+.export #fmt,.export #quality{flex:0 0 auto;width:auto}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover{border-color:var(--danger)}
+.toast-act{border:0;background:none;color:inherit;font:inherit;font-weight:600;text-decoration:underline;cursor:pointer;padding:0 0 0 10px}
+.stat{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.toast{min-height:18px;font-size:13px;color:var(--accent)}
+.toast.err{color:var(--danger)}
+.item.cur{background:var(--accent-soft)}
+.gtag{font-family:var(--mono);font-size:11px;color:var(--accent);margin-left:6px}
+.gnav{display:flex;align-items:center;gap:4px}
+.hint{font-size:12px;color:var(--muted)}
+.sizes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.sizes input[type=number]{width:60px}
+.sz{display:inline-flex;align-items:center;gap:4px}
+.sample{font-size:12px;color:var(--muted);background:var(--accent-soft);border-radius:6px;padding:6px 10px}
+button.num{border:0;background:none;padding:0;cursor:pointer;font-family:var(--mono)}
+button.num:hover{color:var(--accent);text-decoration:underline dotted}
+.touch-only{display:none}
+@media (hover:none){.touch-only{display:inline}.mouse-only{display:none}}
+
+/* Phones and narrow windows: one column, capped list so the preview stays reachable, toasts float at the bottom */
+@media (max-width:820px){
+  .wrap{padding-block:14px calc(64px + env(safe-area-inset-bottom,0px))}
+  header{margin-bottom:12px}
+  h1{font-size:20px}
+  .preview{position:static}
+  .list{max-height:55vh;overflow:auto;overscroll-behavior:contain;padding-right:2px}
+  .stage{max-height:65vh;padding:8px}
+  .drop{padding:16px 12px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:10;
+    max-width:calc(100% - 32px);width:max-content;min-height:0;padding:9px 16px;border-radius:999px;text-align:center;
+    background:var(--fg);color:var(--bg);box-shadow:0 4px 16px rgba(0,0,0,.25)}
+  .toast.err{background:var(--danger);color:#fff}
+  .toast:empty{display:none}
+}
+/* Touch: no drag handle (HTML drag doesn't work with fingers), bigger targets, 16px inputs so iOS doesn't zoom */
+@media (pointer:coarse){
+  .handle{display:none}
+  .item{grid-template-columns:28px 48px minmax(0,1fr) auto;cursor:default;gap:6px}
+  .item img{width:48px;height:34px}
+  .num{font-size:13px;min-height:36px}
+  .icon{width:36px;height:36px;font-size:16px}
+  .btn{padding:10px 14px}
+  .btn.sm{padding:7px 12px}
+  select,input[type=number],input[type=text],#sort{font-size:16px;padding:8px 10px}
+  input[type=color]{width:48px;height:40px}
+  .sizes input[type=number]{width:68px}
+}
+@media (max-width:480px){
+  .export .btn{flex:1 1 40%}
+  .export #fmt,.export #quality{flex:1 1 40%}
+  .settings{grid-template-columns:68px minmax(0,1fr)}
+  header p{font-size:13px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Image Stacker</h1>
+    <p>Add, order, stack, save. Images stay in your browser.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="Images and settings">
+      <div class="drop" id="drop">
+        <strong><span class="mouse-only">Drop images or a PDF here</span><span class="touch-only">Add images or a PDF</span></strong>
+        <small class="kbd-hint">or press <kbd id="pasteKey">Ctrl+V</kbd> anywhere to paste from the clipboard</small>
+        <div class="row">
+          <button class="btn primary" id="pick">Choose files</button>
+          <button class="btn" id="pasteBtn">Paste</button>
+          <input type="file" id="file" accept="image/*,application/pdf,.pdf" multiple hidden>
+        </div>
+      </div>
+
+      <div class="section" id="orderBox">
+        <div class="row" style="justify-content:space-between">
+          <span class="label" id="count">Order</span>
+          <div class="row">
+            <select id="sort" aria-label="Sort images">
+              <option value="">Sort…</option>
+              <option value="az">Filename A → Z</option>
+              <option value="za">Filename Z → A</option>
+              <option value="added">Order added</option>
+            </select>
+            <button class="btn sm" id="clear">Clear</button>
+          </div>
+        </div>
+        <div class="sample" id="sampleNote">These two are examples. They disappear when you add your own images.</div>
+        <ul class="list" id="list"></ul>
+      </div>
+
+      <div class="section">
+        <span class="label">Layout</span>
+        <div class="settings">
+          <label for="gap">Gap</label>
+          <div class="inline"><input type="number" id="gap" min="0" max="400" value="18"><span class="stat">px</span><input type="color" id="gapColor" value="#ffffff" aria-label="Gap colour" title="Gap colour"></div>
+          <label for="width">Width</label>
+          <select id="width">
+            <option value="widest">Scale all to widest</option>
+            <option value="narrowest">Scale all to narrowest</option>
+            <option value="original">Keep original, centre</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <span class="label">Groups</span>
+        <div class="settings">
+          <label for="gmode">Split</label>
+          <select id="gmode">
+            <option value="all">One image with everything</option>
+            <option value="every">Every N images</option>
+            <option value="ranges">Custom ranges</option>
+          </select>
+          <label id="gsizeL">Per image</label>
+          <div class="sizes" id="gsizes">
+            <span class="sizes" id="gsizeInputs"></span>
+            <button class="btn sm" id="gadd" title="Add another group size">+ Next</button>
+            <button class="btn sm danger" id="gremove" hidden></button>
+          </div>
+          <input type="hidden" id="gsize" value="4">
+          <label for="gtail" id="gtailL">After that</label>
+          <select id="gtail">
+            <option value="rest">Put the rest in one image</option>
+            <option value="repeat">Repeat the last size</option>
+          </select>
+          <label for="granges" id="grangesL">Ranges</label>
+          <input type="text" id="granges" placeholder="1-4, 5-8, 9-12">
+        </div>
+        <p class="hint" id="ginfo" hidden></p>
+      </div>
+    </section>
+
+    <section class="panel preview" aria-label="Preview">
+      <div class="row" style="justify-content:space-between">
+        <span class="label">Preview</span>
+        <div class="gnav" id="gnav" hidden>
+          <button class="icon" id="gprev" aria-label="Previous group">‹</button>
+          <span class="stat" id="gpos"></span>
+          <button class="icon" id="gnext" aria-label="Next group">›</button>
+          <button class="icon del" id="gdel" aria-label="Remove this stack" title="Remove the images in this stack">✕</button>
+        </div>
+        <span class="stat" id="size"></span>
+      </div>
+      <div class="stage"><canvas id="cv" width="10" height="10"></canvas><p class="placeholder" id="ph" hidden>Add images and the stacked result shows up here.</p></div>
+      <div class="export">
+        <select id="fmt" aria-label="Format">
+          <option value="png">PNG · lossless</option>
+          <option value="jpg">JPG · smaller</option>
+          <option value="pdf">PDF</option>
+        </select>
+        <select id="quality" aria-label="Quality" title="HD and 4K re-render PDF pages at that width, so text stays sharp. Photos and screenshots are kept at their full original size.">
+          <option value="hd">HD · 2560px</option>
+          <option value="4k">4K · 3840px</option>
+          <option value="std">Standard</option>
+        </select>
+        <input type="text" id="fname" value="stacked" aria-label="File name">
+      </div>
+      <div class="export">
+        <button class="btn primary" id="save">Download</button>
+        <button class="btn" id="copy">Copy</button>
+        <button class="btn primary" id="zip" hidden>Download all (ZIP)</button>
+      </div>
+      <div class="toast" id="toast" role="status"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let items=[], seq=0, pasteN=0, isSample=true, cur=0;
+// Imported PDFs: id → {name, blob}. Pages keep a reference so HD exports can re-render them sharply.
+const docs=new Map();
+const cv=$('cv');
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+const JSZIP='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+const JSPDF='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+const QUALITY={std:0,hd:2560,'4k':3840};
+const PREVIEW_W=1600; // width PDF pages are stored at for the list and preview
+// Browsers refuse to export canvases past these limits (Safari is much stricter on area)
+const isSafari=/^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+const MAX_SIDE=32000, MAX_AREA=isSafari?16e6:120e6;
+const TOO_BIG='The image is too large for this browser to export. Try fewer images per group, Standard quality, or JPG.';
+
+function toast(msg,err,keep,action){
+  const t=$('toast');t.replaceChildren(msg);t.className='toast'+(err?' err':'');
+  if(action){const b=document.createElement('button');b.className='toast-act';b.textContent=action.label;b.onclick=()=>{t.replaceChildren();action.fn()};t.append(b)}
+  clearTimeout(toast._t);if(!keep)toast._t=setTimeout(()=>t.replaceChildren(),action?8000:4000);
+}
+
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+const scripts={};
+function loadScript(src){return scripts[src]||(scripts[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete scripts[src];rej(new Error('Could not load '+src))};document.head.appendChild(s)}))}
+function canvasBlob(c,type,q){return new Promise(r=>c.toBlob(r,type,q))}
+function saveBlob(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+
+// Images are kept in IndexedDB so an accidental reload doesn't lose them
+const DB=(()=>{
+  let p;
+  const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('image-stacker',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}));
+  const get=async k=>{const db=await open();return new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})};
+  const set=async(k,v)=>{const db=await open();return new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})};
+  return {get,set};
+})();
+let saveT;
+function persist(){
+  if(isSample)return;
+  clearTimeout(saveT);
+  saveT=setTimeout(()=>{
+    const used=new Set(items.map(it=>it.src?.doc).filter(Boolean));
+    DB.set('state',{
+      items:items.map(it=>({id:it.id,name:it.name,blob:it.blob,src:it.src})),
+      docs:[...docs].filter(([id])=>used.has(id)).map(([id,d])=>({id,name:d.name,blob:d.blob})),
+      seq,pasteN,
+    }).catch(()=>toast('Could not save images for next time. Browser storage may be full.',true));
+  },300);
+}
+async function restore(){
+  try{
+    const s=await DB.get('state');
+    if(s&&s.items&&s.items.length){
+      (s.docs||[]).forEach(d=>docs.set(d.id,{name:d.name,blob:d.blob}));
+      const out=[];
+      for(const r of s.items){try{const url=URL.createObjectURL(r.blob);out.push({id:r.id,name:r.name,blob:r.blob,src:r.src,url,img:await loadImg(url)})}catch(e){}}
+      if(out.length){items=out;seq=s.seq||0;pasteN=s.pasteN||0;isSample=false;render();toast(`Restored ${out.length} image${out.length>1?'s':''} from last time.`);return}
+    }
+  }catch(e){}
+  initSample();render();
+}
+
+// PDF support (pdf.js is loaded only when a PDF arrives)
+let pdfjsP;
+function pdfjs(){
+  return pdfjsP||(pdfjsP=loadScript(PDFJS+'pdf.min.js').then(()=>{pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';return pdfjsLib}).catch(e=>{pdfjsP=null;throw e}));
+}
+const docCache=new Map();
+function openDoc(id){
+  if(!docCache.has(id))docCache.set(id,(async()=>{
+    const lib=await pdfjs(), d=docs.get(id);
+    if(!d)throw new Error('PDF source missing');
+    return lib.getDocument({data:new Uint8Array(await d.blob.arrayBuffer())}).promise;
+  })().catch(e=>{docCache.delete(id);throw e}));
+  return docCache.get(id);
+}
+async function renderPage(src,width){
+  const doc=await openDoc(src.doc), page=await doc.getPage(src.page);
+  const vp=page.getViewport({scale:width/page.getViewport({scale:1}).width});
+  const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+  const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:x,viewport:vp}).promise;
+  page.cleanup();
+  return c;
+}
+async function pdfPages(f){
+  const id='d'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  docs.set(id,{name:f.name,blob:f});
+  const doc=await openDoc(id).catch(e=>{docs.delete(id);throw e});
+  const base=f.name.replace(/\.pdf$/i,''), pad=String(doc.numPages).length, out=[];
+  for(let n=1;n<=doc.numPages;n++){
+    toast(`Reading ${f.name}: page ${n} of ${doc.numPages}…`,false,true);
+    const c=await renderPage({doc:id,page:n},PREVIEW_W);
+    const blob=await canvasBlob(c,'image/png');c.width=c.height=0;
+    out.push({file:new File([blob],`${base} - ${String(n).padStart(pad,'0')}.png`,{type:'image/png'}),src:{doc:id,page:n}});
+  }
+  return out;
+}
+const isPdf=f=>f.type==='application/pdf'||/\.pdf$/i.test(f.name);
+const isDeck=f=>/\.(pptx?|key|odp)$/i.test(f.name);
+
+async function addFiles(files){
+  files=[...files];
+  const queue=[];
+  for(const f of files){
+    if(isPdf(f)){try{queue.push(...await pdfPages(f))}catch(e){toast('Could not read '+f.name+'. Is it a valid PDF?',true)}}
+    else if(f.type.startsWith('image/'))queue.push({file:f});
+  }
+  if(!queue.length){
+    if(files.some(isDeck))toast('Export the presentation as PDF first (File → Export → PDF), then drop the PDF here.',true);
+    else if(!files.some(isPdf))toast('Those files are not images or PDFs.',true);
+    return;
+  }
+  if(isSample){items=[];isSample=false}
+  let added=0;
+  for(const {file:f,src} of queue){
+    try{
+      const url=URL.createObjectURL(f);
+      const img=await loadImg(url);
+      let name=f.name;
+      if(!name||/^image\.\w+$/.test(name)){pasteN++;name='Pasted '+pasteN+'.'+((f.type.split('/')[1]||'png').replace('jpeg','jpg'))}
+      items.push({id:++seq,name,img,url,blob:f,src});added++;
+    }catch(e){toast('Could not read '+(f.name||'that image'),true)}
+  }
+  render();
+  if(added){
+    toast(`Added ${added} image${added>1?'s':''}.`+(files.some(isDeck)?' (Presentations need exporting to PDF first.)':''));
+    const d=$('drop');d.classList.add('flash');setTimeout(()=>d.classList.remove('flash'),400);
+  }
+}
+
+// Removing is instant; the toast offers Undo instead of asking first
+function removeItems(ids,msg){
+  const before=items.slice();
+  items=items.filter(it=>!ids.has(it.id));render();
+  toast(msg,false,false,{label:'Undo',fn:()=>{items=before;isSample=false;render();toast('Restored.')}});
+}
+function removeStack(){
+  const {groups}=computeGroups(), g=groups[cur];
+  if(!g||groups.length<2)return;
+  removeItems(new Set(g.list.map(it=>it.id)),`Removed stack ${cur+1} (${g.list.length} image${g.list.length>1?'s':''}).`);
+}
+
+const isMac=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent);
+const pasteKey=isMac?'⌘V':'Ctrl+V';
+$('pasteKey').textContent=pasteKey;
+const NO_IMAGE='No image on the clipboard. Copy an image or take a screenshot first.';
+
+async function pasteFromClipboard(){
+  if(!navigator.clipboard?.read){toast(`This browser can't read the clipboard from a button. Press ${pasteKey} instead.`,true);return}
+  try{
+    const files=[];
+    for(const ci of await navigator.clipboard.read()){
+      const t=ci.types.find(t=>t.startsWith('image/'));
+      if(t){const b=await ci.getType(t);files.push(new File([b],'',{type:t}))}
+    }
+    if(!files.length){toast(NO_IMAGE,true);return}
+    addFiles(files);
+  }catch(e){toast(`Clipboard access was blocked. Press ${pasteKey} instead.`,true)}
+}
+
+function makeSample(n,color){
+  const c=document.createElement('canvas');c.width=1232;c.height=693;const x=c.getContext('2d');
+  x.fillStyle='#e9d3a8';x.fillRect(0,0,1232,693);
+  x.fillStyle='#fafafa';x.fillRect(50,50,1132,590);
+  x.strokeStyle='#7a9a3a';x.lineWidth=2;x.strokeRect(62,62,1108,566);
+  x.fillStyle=color;x.font='bold 30px sans-serif';x.textAlign='center';x.fillText('EXAMPLE SLIDE',616,140);
+  x.fillStyle='#222';x.font='bold 64px Georgia,serif';x.fillText('Question '+n,616,330);
+  x.fillStyle='#666';x.font='28px sans-serif';x.fillText('Replace with your own images',616,400);
+  return c;
+}
+function initSample(){
+  items=[{id:++seq,name:'example-1.png',img:makeSample(1,'#b22222')},{id:++seq,name:'example-2.png',img:makeSample(2,'#b22222')}];
+  items.forEach(it=>it.url=it.img.toDataURL('image/png'));
+}
+
+function dims(it){return W(it)+'×'+H(it)}
+function W(it){return it.img.naturalWidth||it.img.width} function H(it){return it.img.naturalHeight||it.img.height}
+
+// Groups: positions are 1-based slots in the current order
+function parseRanges(s,n){
+  const out=[],bad=[];
+  for(const tok of s.split(/[,;\n]+/).map(t=>t.trim()).filter(Boolean)){
+    const m=tok.match(/^(\d+)\s*(?:[-–]\s*(\d+))?$/);
+    if(!m){bad.push(tok);continue}
+    let a=+m[1],b=m[2]?+m[2]:a;if(a>b)[a,b]=[b,a];
+    a=Math.max(1,a);b=Math.min(n,b);
+    if(a>b){bad.push(tok);continue}
+    out.push([a,b]);
+  }
+  return {out,bad};
+}
+function computeGroups(){
+  const mode=$('gmode').value, n=items.length;
+  let info='', ranges=[];
+  if(mode==='every'&&n){
+    // Sizes are used in turn. One size repeats ("every N"); with several, the rest either
+    // goes into one final image or keeps repeating the last size.
+    const sizes=readSizes(), rest=sizes.length>1&&$('gtail').value==='rest';
+    for(let a=1,i=0;a<=n;i++){
+      const k=i>=sizes.length&&rest?n:sizes[Math.min(i,sizes.length-1)];
+      ranges.push([a,Math.min(n,a+k-1)]);a+=k;
+    }
+    if(sizes.length>1&&ranges.length>1)info=`${n} images → ${ranges.length} stacked images (${sizes.join(', ')}, then ${rest?'the rest':sizes.at(-1)+' each'}).`;
+  }else if(mode==='ranges'&&n){
+    const {out,bad}=parseRanges($('granges').value,n);
+    ranges=out;
+    const used=new Set();out.forEach(([a,b])=>{for(let i=a;i<=b;i++)used.add(i)});
+    const parts=[];
+    if(!out.length)info='Type ranges like 1-4, 5-8. Until then everything is one image.';
+    if(bad.length)parts.push('Ignored: '+bad.join(', '));
+    if(out.length&&used.size<n)parts.push(`${n-used.size} image${n-used.size>1?'s are':' is'} not in any group`);
+    if(parts.length)info=(info?info+' ':'')+parts.join(' · ')+'.';
+  }
+  if(!ranges.length)ranges=n?[[1,n]]:[];
+  const groups=ranges.map(([a,b])=>({label:a===b?String(a):`${a}-${b}`,list:items.slice(a-1,b)}));
+  if(mode!=='all'&&groups.length>1&&!info)info=`${n} images → ${groups.length} stacked images.`;
+  return {groups,info};
+}
+
+function render(){
+  const ul=$('list');ul.innerHTML='';
+  const {groups,info}=computeGroups();
+  cur=Math.min(cur,Math.max(0,groups.length-1));
+  const multi=groups.length>1;
+  const tags=new Map();
+  if(multi)groups.forEach((g,gi)=>g.list.forEach(it=>{if(!tags.has(it.id))tags.set(it.id,[]);tags.get(it.id).push(gi)}));
+  const inCur=new Set((groups[cur]?.list||[]).map(it=>it.id));
+  $('orderBox').hidden=!items.length;
+  $('sampleNote').hidden=!isSample;
+  $('count').textContent=items.length?`Order · ${items.length} image${items.length>1?'s':''}`:'Order';
+  $('ginfo').textContent=info;$('ginfo').hidden=!info;
+  items.forEach((it,i)=>{
+    const li=document.createElement('li');li.className='item'+(multi&&inCur.has(it.id)?' cur':'');li.draggable=true;li.dataset.id=it.id;
+    li.innerHTML=`<span class="handle" aria-hidden="true">⋮⋮</span><button class="num" title="Move to position…" aria-label="Image ${i+1}. Move to position">${i+1}</button><img alt=""><div class="meta"><div class="name"></div><div class="dims">${dims(it)}<span class="gtag"></span></div></div>
+      <div class="acts"><button class="icon up" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button class="icon down" aria-label="Move down" ${i===items.length-1?'disabled':''}>↓</button><button class="icon del" aria-label="Remove">✕</button></div>`;
+    li.querySelector('img').src=it.url;
+    li.querySelector('.name').textContent=it.name;li.querySelector('.name').title=it.name;
+    const g=tags.get(it.id);
+    if(g)li.querySelector('.gtag').textContent='→ image '+g.map(x=>x+1).join(', ');
+    if(g)li.addEventListener('click',e=>{if(e.target.closest('button'))return;cur=g[0];render()});
+    li.querySelector('.num').onclick=()=>{
+      const v=prompt(`Move "${it.name}" to position (1–${items.length}):`,i+1);
+      const to=Math.floor(+v)-1;
+      if(v!=null&&to>=0&&to<items.length)move(i,to);
+    };
+    li.querySelector('.up').onclick=()=>move(i,i-1);
+    li.querySelector('.down').onclick=()=>move(i,i+1);
+    li.querySelector('.del').onclick=()=>{
+      if(isSample){items.splice(i,1);render();return}
+      removeItems(new Set([it.id]),`Removed ${it.name}.`);
+    };
+    li.addEventListener('dragstart',e=>{dragId=it.id;li.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','x')});
+    li.addEventListener('dragend',()=>{dragId=null;li.classList.remove('dragging');document.querySelectorAll('.target').forEach(n=>n.classList.remove('target'))});
+    li.addEventListener('dragover',e=>{if(dragId==null)return;e.preventDefault();li.classList.add('target')});
+    li.addEventListener('dragleave',()=>li.classList.remove('target'));
+    li.addEventListener('drop',e=>{if(dragId==null)return;e.preventDefault();e.stopPropagation();
+      const from=items.findIndex(x=>x.id===dragId), to=items.findIndex(x=>x.id===it.id);move(from,to)});
+    ul.appendChild(li);
+  });
+  $('gnav').hidden=!multi;
+  $('gpos').textContent=multi?`Image ${cur+1} of ${groups.length} · #${groups[cur].label}`:'';
+  $('gprev').disabled=cur<=0;$('gnext').disabled=cur>=groups.length-1;
+  const n=groups[cur]?.list.length||0;
+  $('gremove').hidden=!multi;
+  $('gremove').textContent=`Remove stack ${cur+1} (${n})`;
+  $('gremove').title=`Remove the ${n} image${n>1?'s':''} in stack ${cur+1} (#${groups[cur]?.label}). You can undo.`;
+  $('zip').hidden=!multi;$('zip').textContent=`Download all ${groups.length} (${$('fmt').value==='pdf'?'PDF':'ZIP'})`;
+  $('save').className='btn'+(multi?'':' primary');
+  $('save').textContent=multi?'Download this one':'Download';
+  draw(groups[cur]?.list||[]);
+  persist();
+}
+let dragId=null;
+function move(from,to){if(to<0||to>=items.length||from===to)return;const [x]=items.splice(from,1);items.splice(to,0,x);render()}
+
+// Layout of one stack. q is the HD target width for PDF pages (0 = as stored).
+// Everything, gap included, is scaled together, then shrunk if it would pass the browser's canvas limits.
+function layout(list,q){
+  if(!list.length)return null;
+  const mode=$('width').value, gap0=Math.max(0,+$('gap').value||0);
+  const build=hq=>{
+    const s=list.map(it=>{const w=hq&&it.src?Math.max(hq,W(it)):W(it);return {w,h:H(it)*w/W(it)}});
+    const ws=s.map(x=>x.w), target=mode==='narrowest'?Math.min(...ws):Math.max(...ws);
+    return {s,target,width:mode==='original'?Math.max(...ws):target};
+  };
+  const base=build(0), B=q?build(q):base;
+  const raw=B.s.map(x=>mode==='original'?x:{w:B.target,h:x.h*B.target/x.w});
+  let width=B.width, gap=gap0*B.width/base.width;
+  const tall=raw.reduce((t,p)=>t+p.h,0)+gap*(raw.length-1);
+  const fit=Math.min(1,MAX_SIDE/tall,MAX_SIDE/width,Math.sqrt(MAX_AREA/(width*tall)));
+  const parts=list.map((it,i)=>({it,w:Math.round(raw[i].w*fit),h:Math.round(raw[i].h*fit)}));
+  gap=Math.round(gap*fit);width=Math.round(width*fit);
+  return {parts,width,gap,height:parts.reduce((t,p)=>t+p.h,0)+gap*(parts.length-1),reduced:fit<1};
+}
+// hq: re-render PDF pages at the size they're drawn instead of scaling the stored preview image
+async function paint(c,L,hq){
+  c.width=L.width;c.height=L.height;
+  const x=c.getContext('2d');
+  x.fillStyle=$('gapColor').value;x.fillRect(0,0,L.width,L.height);
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+  let y=0;
+  for(const p of L.parts){
+    let src=p.it.img;
+    if(hq&&p.it.src&&p.w>W(p.it)){try{src=await renderPage(p.it.src,p.w)}catch(e){}}
+    x.drawImage(src,Math.round((L.width-p.w)/2),y,p.w,p.h);
+    if(src!==p.it.img)src.width=src.height=0;
+    y+=p.h+L.gap;
+  }
+}
+
+function quality(){return QUALITY[$('quality').value]||0}
+let shown=[];
+function draw(list=shown){
+  shown=list;
+  const L=layout(list,0), has=!!L;
+  $('save').disabled=!has;$('copy').disabled=!has;$('zip').disabled=!has;
+  cv.hidden=!has;$('ph').hidden=has;
+  if(!L){cv.width=10;cv.height=10;$('size').textContent='';return}
+  paint(cv,L,false);
+  const E=layout(list,quality());
+  $('size').textContent=`${E.width} × ${E.height} px`+(E.reduced?' · reduced to fit browser limit':'');
+  $('size').title=list.some(it=>it.src)?'':'These images are exported at their full original size. HD and 4K sharpen pages imported from a PDF.';
+}
+
+function fmt(){return $('fmt').value}
+function ext(){return fmt()==='jpg'?'jpg':fmt()==='pdf'?'pdf':'png'}
+async function renderExport(list){const c=document.createElement('canvas');await paint(c,layout(list,quality()),true);return c}
+async function imageBlob(list){
+  const c=await renderExport(list);
+  const b=fmt()==='png'?await canvasBlob(c,'image/png'):await canvasBlob(c,'image/jpeg',0.95);
+  c.width=c.height=0;
+  if(!b)throw new Error(TOO_BIG);
+  return b;
+}
+// One page per stack, each page sized to its image (PDF pages max out at 14400pt)
+async function buildPdf(lists,progress){
+  await loadScript(JSPDF);
+  let pdf;
+  for(let i=0;i<lists.length;i++){
+    progress?.(i);
+    const c=await renderExport(lists[i]);
+    const blob=await canvasBlob(c,'image/jpeg',0.95);
+    if(!blob)throw new Error(TOO_BIG);
+    const k=Math.min(0.75,14400/Math.max(c.width,c.height)), pw=c.width*k, ph=c.height*k, o=pw>ph?'l':'p';
+    c.width=c.height=0;
+    if(!pdf)pdf=new window.jspdf.jsPDF({unit:'pt',format:[pw,ph],orientation:o,compress:true});
+    else pdf.addPage([pw,ph],o);
+    pdf.addImage(new Uint8Array(await blob.arrayBuffer()),'JPEG',0,0,pw,ph,undefined,'NONE');
+  }
+  return pdf.output('blob');
+}
+function baseName(){return ($('fname').value||'stacked').trim().replace(/\.(png|jpe?g|zip|pdf)$/i,'')||'stacked'}
+function fileName(i,groups){
+  if(groups.length<2)return baseName()+'.'+ext();
+  return `${baseName()}-${String(i+1).padStart(String(groups.length).length,'0')} (${groups[i].label}).${ext()}`;
+}
+async function busy(btn,fn){
+  if(isSample){toast('Add your own images first. These are examples.',true);return}
+  btn.disabled=true;
+  try{await fn()}
+  catch(e){console.error(e);toast(e.message===TOO_BIG?TOO_BIG:'Export failed. Check your connection and try again.',true)}
+  finally{btn.disabled=false}
+}
+
+$('save').onclick=()=>busy($('save'),async()=>{
+  const {groups}=computeGroups(), list=groups[cur].list, name=fileName(cur,groups);
+  toast('Preparing…',false,true);
+  saveBlob(fmt()==='pdf'?await buildPdf([list]):await imageBlob(list),name);
+  toast('Saved '+name);
+});
+
+$('zip').onclick=()=>busy($('zip'),async()=>{
+  const {groups}=computeGroups(), n=groups.length;
+  if(fmt()==='pdf'){
+    const blob=await buildPdf(groups.map(g=>g.list),i=>toast(`Building page ${i+1} of ${n}…`,false,true));
+    saveBlob(blob,baseName()+'.pdf');toast(`Saved ${baseName()}.pdf with ${n} pages.`);
+    return;
+  }
+  await loadScript(JSZIP);
+  const zip=new JSZip();
+  for(let i=0;i<n;i++){
+    toast(`Building image ${i+1} of ${n}…`,false,true);
+    zip.file(fileName(i,groups),await imageBlob(groups[i].list));
+  }
+  toast('Zipping…',false,true);
+  saveBlob(await zip.generateAsync({type:'blob'}),baseName()+'.zip');
+  toast(`Saved ${baseName()}.zip with ${n} images.`);
+});
+
+// ClipboardItem gets a promise so the write starts inside the click (Safari requires that)
+$('copy').onclick=()=>busy($('copy'),async()=>{
+  const list=computeGroups().groups[cur].list;
+  const blob=renderExport(list).then(c=>canvasBlob(c,'image/png')).then(b=>b||Promise.reject(new Error(TOO_BIG)));
+  try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})])}
+  catch(e){toast(e.message===TOO_BIG?TOO_BIG:'This browser blocked copying images. Use Download instead.',true);return}
+  toast('Copied. Paste it into WhatsApp or anywhere else.');
+});
+
+$('gprev').onclick=()=>{cur--;render()};
+$('gnext').onclick=()=>{cur++;render()};
+$('gdel').onclick=removeStack;
+$('gremove').onclick=removeStack;
+// ← / → step through stacks when not typing
+document.addEventListener('keydown',e=>{
+  if($('gnav').hidden||e.metaKey||e.ctrlKey||e.altKey||e.target.closest?.('input,select,textarea'))return;
+  if(e.key==='ArrowLeft'&&cur>0){cur--;render()}
+  else if(e.key==='ArrowRight'&&!$('gnext').disabled){cur++;render()}
+});
+
+$('pick').onclick=()=>$('file').click();
+$('pasteBtn').onclick=pasteFromClipboard;
+$('file').onchange=e=>{addFiles(e.target.files);e.target.value=''};
+const drop=$('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{if(dragId!=null)return;e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,()=>drop.classList.remove('over')));
+drop.addEventListener('drop',e=>{if(dragId!=null)return;e.preventDefault();e.stopPropagation();if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files)});
+// Allow dropping files anywhere on the page
+document.addEventListener('dragover',e=>{if(dragId==null&&e.dataTransfer.types.includes('Files'))e.preventDefault()});
+document.addEventListener('drop',e=>{if(dragId==null&&e.dataTransfer.files.length){e.preventDefault();addFiles(e.dataTransfer.files)}});
+// Paste works anywhere on the page: screenshots, "Copy image" from a browser, or files copied in Finder/Explorer
+document.addEventListener('paste',e=>{
+  const dt=e.clipboardData;if(!dt)return;
+  let files=[...dt.files].filter(f=>f.type.startsWith('image/')||isPdf(f));
+  if(!files.length)files=[...dt.items].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile()).filter(Boolean);
+  if(files.length){e.preventDefault();addFiles(files)}
+  else if(!e.target.closest?.('input,textarea'))toast(NO_IMAGE,true);
+});
+
+$('sort').onchange=e=>{
+  const v=e.target.value;const cmp=(a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
+  if(v==='az')items.sort(cmp);else if(v==='za')items.sort((a,b)=>cmp(b,a));else if(v==='added')items.sort((a,b)=>a.id-b.id);
+  e.target.value='';render();
+};
+$('clear').onclick=()=>{
+  if(isSample){items=[];isSample=false;render();return}
+  cur=0;removeItems(new Set(items.map(it=>it.id)),`Removed all ${items.length} images.`);
+};
+['gap','gapColor','width','quality'].forEach(id=>$(id).addEventListener('input',()=>draw()));
+$('fmt').addEventListener('change',()=>render());
+
+function syncGroupFields(){
+  const m=$('gmode').value;
+  $('gsizes').hidden=$('gsizeL').hidden=m!=='every';
+  $('gtail').hidden=$('gtailL').hidden=m!=='every'||readSizes().length<2;
+  $('granges').hidden=$('grangesL').hidden=m!=='ranges';
+}
+$('gmode').addEventListener('change',()=>{syncGroupFields();cur=0;render()});
+$('granges').addEventListener('input',()=>render());
+$('gtail').addEventListener('change',()=>{cur=0;render()});
+
+// "Every N" sizes: a row of number boxes (4, then 3, then 5…) mirrored into the hidden #gsize field
+function readSizes(){const v=$('gsize').value.split(',').map(x=>Math.floor(+x)||0).filter(x=>x>0);return v.length?v:[4]}
+function syncSizes(){
+  $('gsize').value=[...$('gsizeInputs').querySelectorAll('input')].map(i=>i.value).join(',');
+  $('gsize').dispatchEvent(new Event('change'));
+  syncGroupFields();render();
+}
+function buildSizes(focusLast){
+  const box=$('gsizeInputs');box.innerHTML='';
+  readSizes().forEach((k,i)=>{
+    const s=document.createElement('span');s.className='sz';
+    s.innerHTML=(i?'<span class="hint">then</span>':'')+`<input type="number" min="1" max="999" aria-label="Group ${i+1} size">`+(i?'<button class="icon" aria-label="Remove this size">✕</button>':'');
+    const inp=s.querySelector('input');inp.value=k;inp.addEventListener('input',syncSizes);
+    if(i)s.querySelector('button').onclick=()=>{s.remove();syncSizes();buildSizes()};
+    box.appendChild(s);
+  });
+  if(focusLast){const all=box.querySelectorAll('input');all[all.length-1].select()}
+}
+$('gadd').onclick=()=>{const s=readSizes();$('gsize').value=[...s,s.at(-1)].join(',');buildSizes(true);syncSizes()};
+
+const SETTINGS=['gap','gapColor','width','fmt','quality','gmode','gsize','gtail','granges'];
+try{const s=JSON.parse(localStorage.getItem('stacker-settings')||'{}');
+  SETTINGS.forEach(k=>{if(s[k]!=null)$(k).value=s[k]})}catch(e){}
+// A stored value that no longer exists as an option (e.g. an old format) falls back to the default
+['fmt','quality','width','gmode','gtail'].forEach(k=>{if(!$(k).value)$(k).selectedIndex=0});
+SETTINGS.forEach(k=>$(k).addEventListener('change',()=>{
+  try{localStorage.setItem('stacker-settings',JSON.stringify(Object.fromEntries(SETTINGS.map(k=>[k,$(k).value]))))}catch(e){}
+}));
+syncGroupFields();buildSizes();
+
+restore();
+</script>
+
+</body>
+</html>

@@ -3,19 +3,19 @@ import { parseQuiz, quizCards } from './quiz';
 
 describe('parseQuiz', () => {
   it('reads Q:/A: lines, including numbered and multi-line ones', () => {
-    const qs = parseQuiz('Q1: Surah Al-Fil ke mutabiq kya seekh milta hai?\nAns: Allah apni kisi bhi maqlooq se\napna kaam le sakta hai\n\nQuestion 2. What is Falah?\nAnswer - Success with no failure after it');
+    const qs = parseQuiz('Q1: Paudhe apna khana kaise banate hain?\nAns: Dhoop, paani aur hawa se,\nis ko photosynthesis kehte hain\n\nQuestion 2. What is gravity?\nAnswer - The pull between objects');
     expect(qs).toEqual([
-      { q: 'Surah Al-Fil ke mutabiq kya seekh milta hai?', a: 'Allah apni kisi bhi maqlooq se\napna kaam le sakta hai' },
-      { q: 'What is Falah?', a: 'Success with no failure after it' },
+      { q: 'Paudhe apna khana kaise banate hain?', a: 'Dhoop, paani aur hawa se,\nis ko photosynthesis kehte hain' },
+      { q: 'What is gravity?', a: 'The pull between objects' },
     ]);
   });
   it('reads Urdu سوال / جواب', () => {
-    expect(parseQuiz('سوال: فلاح کیا ہے؟\nجواب: کامیابی')).toEqual([{ q: 'فلاح کیا ہے؟', a: 'کامیابی' }]);
+    expect(parseQuiz('سوال: پاکستان کا دارالحکومت کیا ہے؟\nجواب: اسلام آباد')).toEqual([{ q: 'پاکستان کا دارالحکومت کیا ہے؟', a: 'اسلام آباد' }]);
   });
   it('reads blank-line separated blocks: first line question, rest answer', () => {
-    expect(parseQuiz('Who built the Kaaba?\nIbrahim and Ismail\n\nHow many surahs?\n114')).toEqual([
-      { q: 'Who built the Kaaba?', a: 'Ibrahim and Ismail' },
-      { q: 'How many surahs?', a: '114' },
+    expect(parseQuiz('Who wrote Hamlet?\nWilliam Shakespeare\n\nHow many days in a leap year?\n366')).toEqual([
+      { q: 'Who wrote Hamlet?', a: 'William Shakespeare' },
+      { q: 'How many days in a leap year?', a: '366' },
     ]);
   });
 });

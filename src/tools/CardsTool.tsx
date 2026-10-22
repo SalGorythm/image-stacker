@@ -12,20 +12,27 @@ interface Props {
 
 const KEY = 'cards-draft';
 const EXAMPLE: Card = {
-  text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-  sub: 'In the name of Allah, the Most Gracious, the Most Merciful',
-  footer: 'Weekly Quran Circle',
+  text: 'محنت کامیابی کی کنجی ہے',
+  sub: 'Hard work is the key to success',
+  footer: 'Your name or group',
   template: 'paper',
   size: 'status',
   font: 'auto',
 };
 
+/** The example text earlier versions saved as a draft; replaced by the current example. */
+const OLD_EXAMPLE = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
+
 function load(): Card {
-  try { return { ...EXAMPLE, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return EXAMPLE; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (saved.text === OLD_EXAMPLE) { delete saved.text; delete saved.sub; delete saved.footer; }
+    return { ...EXAMPLE, ...saved };
+  } catch { return EXAMPLE; }
 }
 
 /**
- * Cards: verses, quotes and announcements as images sized for WhatsApp Status or Instagram,
+ * Cards: quotes, poems and announcements as images sized for WhatsApp Status or Instagram,
  * with proper Arabic, Urdu (Nastaliq) and English text. Nothing is uploaded.
  */
 export function CardsTool({ toast, show }: Props) {
@@ -60,13 +67,13 @@ export function CardsTool({ toast, show }: Props) {
     <main className="wrap">
       <div className="tool-head">
         <h1>{pageH1('Cards')}</h1>
-        <p>Make a verse, quote or announcement card for WhatsApp Status or Instagram, with proper Arabic and Urdu lettering. Nothing is uploaded.</p>
+        <p>Make a quote, poem or announcement card for WhatsApp Status or Instagram, with proper Arabic and Urdu lettering. Nothing is uploaded.</p>
       </div>
       <div className="grid">
         <section className="panel" aria-label="Card text and style">
           <div className="section" style={{ borderTop: 0, paddingTop: 0 }}>
             <label className="label" htmlFor="card-text">Main text</label>
-            <textarea id="card-text" dir="auto" rows={4} value={card.text} onChange={e => set({ text: e.target.value })} placeholder="A verse, hadith, quote or announcement" />
+            <textarea id="card-text" dir="auto" rows={4} value={card.text} onChange={e => set({ text: e.target.value })} placeholder="A quote, a line of poetry, a greeting or an announcement" />
             <label className="label" htmlFor="card-sub">Second line</label>
             <textarea id="card-sub" dir="auto" rows={2} value={card.sub} onChange={e => set({ sub: e.target.value })} placeholder="Translation or reference (optional)" />
             <label className="label" htmlFor="card-footer">Footer</label>
@@ -103,7 +110,7 @@ export function CardsTool({ toast, show }: Props) {
                   <label htmlFor="card-font">Font</label>
                   <select id="card-font" value={card.font} onChange={e => set({ font: e.target.value as ScriptFont })}>
                     <option value="auto">Automatic (Nastaliq for Urdu, Naskh for Arabic)</option>
-                    <option value="amiri">Amiri (classical, good for verses)</option>
+                    <option value="amiri">Amiri (classical, good for poetry)</option>
                     <option value="naskh">Naskh</option>
                     <option value="nastaliq">Nastaliq</option>
                   </select>

@@ -371,7 +371,7 @@ export default function App() {
     ({ key, label, hint, group, href: pathOf(key as Exclude<typeof route, 'info'>), active: route === key });
   const tools: ToolLink[] = [
     T('stack', 'Stacker', 'Stack images and PDF slides into tall images, grids or carousels', 'Share'),
-    T('cards', 'Cards', 'Verse, quote and announcement cards, Urdu and Arabic ready', 'Share'),
+    T('cards', 'Cards', 'Quote, poem and announcement cards, Urdu and Arabic ready', 'Share'),
     T('quiz', 'Quiz cards', 'Numbered question cards with the answers last', 'Share'),
     T('qr', 'QR codes', 'WhatsApp, WiFi and contact codes as posters, never expire', 'Share'),
     T('watermark', 'Watermark', 'Your logo or name on many photos at once', 'Share'),

@@ -36,7 +36,7 @@ export function textStyle(text: string, choice: ScriptFont) {
   };
 }
 
-/** Right to left when the first strong letter is Arabic script (so "Surah الفاتحة" stays left to right). */
+/** Right to left when the first strong letter is Arabic script (so "Chapter الف" stays left to right). */
 export function rtlFirst(text: string) {
   for (const ch of text) {
     if (ARABIC.test(ch)) return true;

@@ -4,14 +4,14 @@ import { fitText, pickFont, rtlFirst, textStyle, wrapLines } from './script';
 describe('script detection', () => {
   it('gives Urdu Nastaliq, Arabic Naskh, English nothing', () => {
     expect(pickFont('یہ ہمارا اسکول ہے', 'auto')).toBe('nastaliq');
-    expect(pickFont('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', 'auto')).toBe('naskh');
-    expect(pickFont('Revision of Quran', 'auto')).toBeNull();
+    expect(pickFont('مَرْحَبًا بِكُمْ', 'auto')).toBe('naskh');
+    expect(pickFont('Revision, Part 1', 'auto')).toBeNull();
     expect(pickFont('الحمد لله', 'amiri')).toBe('amiri');
     expect(pickFont('جوابات سبق نمبر ۳', 'auto')).toBe('nastaliq');
   });
   it('sets direction by the first strong letter', () => {
     expect(rtlFirst('سورة الفاتحة 1')).toBe(true);
-    expect(rtlFirst('Surah الفاتحة')).toBe(false);
+    expect(rtlFirst('Chapter الف')).toBe(false);
     expect(textStyle('یہ', 'auto').lineHeight).toBeGreaterThan(textStyle('hello', 'auto').lineHeight);
   });
 });

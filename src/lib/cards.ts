@@ -29,7 +29,7 @@ export interface Card {
 
 const LATIN_SERIF = 'Georgia, "Times New Roman", serif';
 
-/** An eight-pointed star (two overlapping squares), a common motif in Islamic geometric art. */
+/** An eight-pointed star (two overlapping squares), a simple geometric ornament. */
 function star(x: CanvasRenderingContext2D, cx: number, cy: number, r: number, fill: string) {
   x.save();
   x.fillStyle = fill;

@@ -207,9 +207,9 @@ export const TOOL_PAGES: Page[] = [
   {
     path: '/quote-card-maker', route: 'cards', og: 'cards', priority: 0.7,
     title: 'Quote Card Maker – Urdu & Arabic Text on Image, Free',
-    description: 'Make verse, quote and announcement cards with proper Urdu Nastaliq and Arabic fonts for WhatsApp Status and Instagram. Free, no watermark.',
-    h1: 'Quote and verse card maker (Urdu and Arabic ready)',
-    summary: 'Cards turns a verse, quote, hadith or announcement into a clean image for WhatsApp Status or Instagram, with proper Urdu Nastaliq and Arabic Naskh fonts that join letters correctly.',
+    description: 'Make quote, poetry and announcement cards with proper Urdu Nastaliq and Arabic fonts for WhatsApp Status and Instagram. Free, no watermark.',
+    h1: 'Quote card maker (Urdu and Arabic ready)',
+    summary: 'Cards turns a quote, a line of poetry, a greeting or an announcement into a clean image for WhatsApp Status or Instagram, with proper Urdu Nastaliq and Arabic Naskh fonts that join letters correctly.',
     steps: [
       'Type or paste your text, and a second line such as a translation or source if you want one.',
       'Pick a style and a size: WhatsApp Status, 4:5 post or square.',

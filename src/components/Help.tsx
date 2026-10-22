@@ -40,7 +40,7 @@ export function Help({ onClose }: Props) {
         </ol>
         <p className="hint">
           <strong>More tools</strong> are under <strong>Tools</strong> at the top: fit a photo or signature to a form's size, scan paper to PDF, passport
-          photos, clean signatures, verse and quiz cards, QR codes, watermarks, background removal, short videos, copying text out of images,
+          photos, clean signatures, quote and quiz cards, QR codes, watermarks, background removal, short videos, copying text out of images,
           removing hidden location data, and opening iPhone photos.
         </p>
         <p className="hint">Your images and settings are kept in this browser, so a reload doesn't lose them. Use Clear to remove them. Photos in Fit to size, Signature and Passport photo are never saved.</p>

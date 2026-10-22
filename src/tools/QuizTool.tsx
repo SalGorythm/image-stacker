@@ -16,13 +16,20 @@ interface Props {
 interface Draft { text: string; title: string; footer: string; order: QuizOrder; template: CardTemplate; size: CardSize }
 const KEY = 'quiz-draft';
 const EXAMPLE: Draft = {
-  text: 'Q: Surah Al-Takathur ke mutabiq, ghaflat ke asbaab kya hain?\nA: Duniya hasil karne ki dhun\n\nQ: Surah Ash-Shams ke mutabiq, "Falah" ka matlab kya hai?\nA: Aisi kaamyabi jis ke baad koi nakami nahi',
-  title: 'Revision of Quran, Part 1', footer: 'Weekly Quran Circle', order: 'end', template: 'paper', size: 'post',
+  text: 'Q: What is the largest planet in our solar system?\nA: Jupiter\n\nQ: How many continents are there?\nA: Seven\n\nسوال: پانی کس درجہ حرارت پر ابلتا ہے؟\nجواب: 100 ڈگری سینٹی گریڈ',
+  title: 'General knowledge, Part 1', footer: 'Weekly class quiz', order: 'end', template: 'paper', size: 'post',
 };
 
 /** Quiz cards: type questions and answers once, get numbered cards ready to post one by one, answers last. */
 export function QuizTool({ toast, show }: Props) {
-  const [d, setD] = useState<Draft>(() => { try { return { ...EXAMPLE, ...JSON.parse(localStorage.getItem(KEY) || '{}') }; } catch { return EXAMPLE; } });
+  const [d, setD] = useState<Draft>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+      // Earlier versions saved their example as a draft; show the current example instead
+      if (typeof saved.text === 'string' && saved.text.startsWith('Q: Surah Al-Takathur')) { delete saved.text; delete saved.title; delete saved.footer; }
+      return { ...EXAMPLE, ...saved };
+    } catch { return EXAMPLE; }
+  });
   const [at, setAt] = useState(0);
   const [busy, setBusy] = useState(false);
   const cv = useRef<HTMLCanvasElement>(null);

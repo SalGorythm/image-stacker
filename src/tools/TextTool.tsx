@@ -98,7 +98,7 @@ export function TextTool({ intakeRef, toast, show }: Props) {
               {LANGS.map(([l]) => <option key={l}>{l}</option>)}
             </select>
           </div>
-          {rtl && <p className="hint warn-text">Urdu and Arabic are read less reliably than English on this device: Nastaliq script and ligatures such as بسم الله are often missed. Check the text before you use it.</p>}
+          {rtl && <p className="hint warn-text">Urdu and Arabic are read less reliably than English on this device: Nastaliq script and joined letters are often missed. Check the text before you use it.</p>}
           {entries.length > 0 && <button className="btn sm" disabled={!!progress} onClick={() => { setEntries(p => p.map(e => ({ ...e, text: null }))); read(entries, langs); }}>Read again in {lang}</button>}
           <p className="hint">Clear, straight, well-lit text reads best. For paper, use Scan first, then read the cleaned page.</p>
         </section>

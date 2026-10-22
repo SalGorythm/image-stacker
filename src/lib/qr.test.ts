@@ -17,7 +17,7 @@ describe('WhatsApp links', () => {
 
 describe('WiFi', () => {
   it('escapes special characters', () =>
-    expect(wifiPayload({ ssid: 'Masjid;Guest', password: 'p:a"ss', security: 'WPA', hidden: false })).toBe('WIFI:T:WPA;S:Masjid\\;Guest;P:p\\:a\\"ss;;'));
+    expect(wifiPayload({ ssid: 'Cafe;Guest', password: 'p:a"ss', security: 'WPA', hidden: false })).toBe('WIFI:T:WPA;S:Cafe\\;Guest;P:p\\:a\\"ss;;'));
   it('leaves out the password for open networks', () =>
     expect(wifiPayload({ ssid: 'Open', password: 'x', security: 'nopass', hidden: true })).toBe('WIFI:T:nopass;S:Open;H:true;;'));
 });

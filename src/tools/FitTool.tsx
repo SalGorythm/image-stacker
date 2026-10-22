@@ -4,6 +4,7 @@ import type { ToastOptions, ToastState } from '../hooks';
 import type { FitSpec } from '../lib/fit';
 import { fitImage, kb, type FitResult } from '../lib/fitImage';
 import { loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../lib/files';
+import { handoff } from '../lib/handoff';
 import { PRESETS } from '../lib/presets';
 import { canShareFiles, saveBlob, zipFiles } from '../lib/render';
 
@@ -69,6 +70,14 @@ export function FitTool({ intakeRef, toast, show }: Props) {
     intakeRef.current = add;
     return () => { intakeRef.current = null; };
   });
+  // A cleaned signature (or another tool's output) arrives here when the tool opens
+  useEffect(() => {
+    if (!handoff.files.length) return;
+    const got = handoff.files;
+    handoff.files = [];
+    add(got);
+    show('Signature added. Pick your form\'s preset or type its rules.');
+  }, []);
 
   // Re-fit every file whenever the rules or the files change (debounced so typing stays smooth)
   useEffect(() => {

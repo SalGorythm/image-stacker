@@ -6,6 +6,7 @@ import { PagePicker } from './components/PagePicker';
 import { RedactEditor } from './components/RedactEditor';
 import { SiteFooter, SiteHeader, type NavItem, type ToolLink } from './components/Site';
 import { FitTool } from './tools/FitTool';
+import { SignatureTool } from './tools/SignatureTool';
 import { Preview } from './components/Preview';
 import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
 import { useEvent, useInstall, useRoute, useToast } from './hooks';
@@ -246,7 +247,7 @@ export default function App() {
   // Which tool is open; dropped and pasted files go to that tool
   const route = useRoute();
   const intake = useRef<((files: File[]) => void) | null>(null);
-  const take = useEvent((files: File[]) => (route === 'fit' && intake.current ? intake.current(files) : addFiles(files)));
+  const take = useEvent((files: File[]) => (route !== 'stack' && intake.current ? intake.current(files) : addFiles(files)));
 
   // Page-wide: drop files anywhere, paste anywhere, ← / → to step through stacks
   const onPaste = useEvent((e: ClipboardEvent) => {
@@ -293,7 +294,7 @@ export default function App() {
   const toStacker = (then: () => void) => { location.hash = '#/'; setTimeout(then, 80); };
   const goTo = (id: string) => {
     const el = document.getElementById(id);
-    if (!el) { if (location.hash.startsWith('#/fit')) toStacker(() => goTo(id)); return; }
+    if (!el) { if (location.hash.length > 2) toStacker(() => goTo(id)); return; }
     el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     el.classList.remove('spot');
     void el.offsetWidth; // restart the highlight animation
@@ -305,7 +306,7 @@ export default function App() {
       key: 'pdf', label: 'PDF pages', hint: 'Import chosen pages from a PDF',
       run: () => {
         const el = fileInput.current;
-        if (!el) { if (location.hash.startsWith('#/fit')) toStacker(() => nav[1].run()); return; }
+        if (!el) { if (route !== 'stack') toStacker(() => nav[1].run()); return; }
         goTo('add');
         el.accept = 'application/pdf,.pdf';
         el.click();
@@ -336,6 +337,7 @@ export default function App() {
   const tools: ToolLink[] = [
     { key: 'stack', label: 'Stacker', href: '#/', active: route === 'stack' },
     { key: 'fit', label: 'Fit to size', href: '#/fit', active: route === 'fit' },
+    { key: 'signature', label: 'Signature', href: '#/signature', active: route === 'signature' },
   ];
   const onInstall = canInstall
     ? async () => { if ((await install()) === 'ios') show('On iPhone or iPad: tap Share, then Add to Home Screen.', { keep: false }); }
@@ -359,7 +361,8 @@ export default function App() {
         }}
       />
     )}
-    {route === 'fit' ? <FitTool intakeRef={intake} toast={toast} show={show} /> : (
+    {route === 'fit' ? <FitTool intakeRef={intake} toast={toast} show={show} />
+      : route === 'signature' ? <SignatureTool intakeRef={intake} toast={toast} show={show} /> : (
     <main className="wrap">
       <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
 

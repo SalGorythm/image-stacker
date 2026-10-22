@@ -58,8 +58,8 @@ export function useToast() {
   return { toast, show, hide };
 }
 
-export type Route = 'stack' | 'fit';
-const routeOf = (hash: string): Route => (hash.startsWith('#/fit') ? 'fit' : 'stack');
+export type Route = 'stack' | 'fit' | 'signature';
+const routeOf = (hash: string): Route => (hash.startsWith('#/fit') ? 'fit' : hash.startsWith('#/signature') ? 'signature' : 'stack');
 
 /** Which tool is open, from the URL hash (#/ for the stacker, #/fit, …), so links and Back work. */
 export function useRoute() {

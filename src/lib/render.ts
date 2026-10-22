@@ -1,4 +1,5 @@
 import { CAPTION_RATIO, fillCaption, textOn, type StackMeta } from './captions';
+import { seamBetween } from './join';
 import { CANVAS_LIMITS, layout, type Layout } from './layout';
 import { renderPage } from './pdf';
 import { imgH, imgW, QUALITY_WIDTH, WHATSAPP_BOX, type Item, type Settings } from './types';
@@ -21,11 +22,33 @@ export function cropOf(it: Item, s: Settings): Crop {
   return combine(s.autoTrim ? blankEdges(it.img) : NO_CROP, s.trim);
 }
 
-/** Size of each image after trimming, for layout. */
-const sizer = (s: Settings) => (it: Item) => {
-  const c = cropOf(it, s);
-  return { w: imgW(it) * (1 - c.l - c.r), h: imgH(it) * (1 - c.t - c.b), vector: !!it.src };
-};
+/** A stack's layout plus what was cut from each image and which neighbours were joined. */
+export interface StackLayout extends Layout<Item> {
+  crops: Crop[];
+  joined: boolean[];
+}
+
+/**
+ * Trim for each image, and for overlapping screenshots (when joining is on) the seam: the first
+ * loses its fixed footer, the second everything the first already showed.
+ */
+function prepare(list: Item[], s: Settings) {
+  const crops = list.map(it => cropOf(it, s));
+  const joined = list.map(() => false);
+  if (s.joinOverlap)
+    for (let i = 0; i < list.length - 1; i++) {
+      const seam = seamBetween(list[i], list[i + 1]);
+      if (!seam) continue;
+      joined[i] = true;
+      crops[i] = { ...crops[i], b: seam.aBottom };
+      crops[i + 1] = { ...crops[i + 1], t: seam.bTop };
+    }
+  const size = (i: number) => {
+    const c = crops[i], it = list[i];
+    return { w: imgW(it) * (1 - c.l - c.r), h: imgH(it) * (1 - c.t - c.b), vector: !!it.src };
+  };
+  return { crops, joined, size, idx: list.map((_, i) => i) };
+}
 
 /** Caption band sizes for layout: one band above or below when a caption is set. */
 const bands = (s: Settings) => {
@@ -33,19 +56,24 @@ const bands = (s: Settings) => {
   return { head: on && s.captionPos === 'top' ? CAPTION_RATIO : 0, foot: on && s.captionPos === 'bottom' ? CAPTION_RATIO : 0 };
 };
 
-export function stackLayout(list: Item[], s: Settings, hq: boolean): Layout<Item> | null {
-  return layout(list, sizer(s), {
+export function stackLayout(list: Item[], s: Settings, hq: boolean): StackLayout | null {
+  const P = prepare(list, s);
+  const L = layout(P.idx, P.size, {
     gap: s.gap,
     width: s.width,
     q: hq ? QUALITY_WIDTH[s.quality] : 0,
     ...CANVAS_LIMITS,
     box: hq && s.quality === 'whatsapp' ? WHATSAPP_BOX : undefined,
     ...bands(s),
+    joined: P.joined,
   });
+  return L && { ...L, parts: L.parts.map(p => ({ ...p, it: list[p.it] })), crops: P.crops, joined: P.joined };
 }
 
-export const stackAdvice = (list: Item[], s: Settings) =>
-  whatsappAdvice(list, sizer(s), { gap: s.gap, width: s.width, q: QUALITY_WIDTH.whatsapp, ...bands(s) });
+export function stackAdvice(list: Item[], s: Settings) {
+  const P = prepare(list, s);
+  return whatsappAdvice(P.idx, P.size, { gap: s.gap, width: s.width, q: QUALITY_WIDTH.whatsapp, ...bands(s), joined: P.joined });
+}
 
 const FONT = '"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif';
 
@@ -82,7 +110,7 @@ function badge(x: CanvasRenderingContext2D, n: number, left: number, top: number
  * Draws a stack: caption band, each image trimmed, image numbers, watermark. With hq, PDF pages
  * are re-rendered so their trimmed part comes out at the size it's drawn.
  */
-export async function paint(c: HTMLCanvasElement, L: Layout<Item>, s: Settings, hq: boolean, meta?: StackMeta) {
+export async function paint(c: HTMLCanvasElement, L: StackLayout, s: Settings, hq: boolean, meta?: StackMeta) {
   c.width = L.width;
   c.height = L.height;
   const x = c.getContext('2d')!;
@@ -95,8 +123,8 @@ export async function paint(c: HTMLCanvasElement, L: Layout<Item>, s: Settings, 
   if (caption && L.headH) bandText(x, caption, L.width, 0, L.headH, ink);
 
   let y = L.headH;
-  for (const p of L.parts) {
-    const cr = cropOf(p.it, s), keepW = 1 - cr.l - cr.r, keepH = 1 - cr.t - cr.b;
+  for (const [k, p] of L.parts.entries()) {
+    const cr = L.crops[k], keepW = 1 - cr.l - cr.r, keepH = 1 - cr.t - cr.b;
     let src: HTMLImageElement | HTMLCanvasElement = p.it.img;
     if (hq && p.it.src && p.w > imgW(p.it) * keepW) {
       try { src = await renderPage(p.it.src, p.w / keepW); } catch { /* fall back to stored image */ }
@@ -116,7 +144,7 @@ export async function paint(c: HTMLCanvasElement, L: Layout<Item>, s: Settings, 
     }), { x: left, y: top, w: p.w, h: p.h });
     const pos = meta?.positions?.get(p.it.id);
     if (s.numbers && pos) badge(x, pos, left, y, L.width);
-    y += p.h + L.gap;
+    y += p.h + (L.joined[k] ? 0 : L.gap);
   }
 
   if (caption && L.footH) bandText(x, caption, L.width, L.height - L.footH, L.footH, ink);

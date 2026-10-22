@@ -48,6 +48,8 @@ export interface Settings {
   /** Badge each image with its position in the list. */
   numbers: boolean;
   watermark: string;
+  /** Join consecutive scrolling screenshots, removing what repeats. */
+  joinOverlap: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -67,6 +69,7 @@ export const DEFAULT_SETTINGS: Settings = {
   captionPos: 'top',
   numbers: false,
   watermark: '',
+  joinOverlap: false,
 };
 
 /** Target width for PDF pages at each quality (0 = as stored). */

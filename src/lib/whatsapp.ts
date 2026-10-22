@@ -20,7 +20,7 @@ export interface Advice {
 export function whatsappAdvice<T>(
   list: T[],
   size: (it: T) => Sized,
-  base: Pick<LayoutOptions, 'gap' | 'width' | 'q' | 'head' | 'foot'>,
+  base: Pick<LayoutOptions, 'gap' | 'width' | 'q' | 'head' | 'foot' | 'joined'>,
 ): Advice | null {
   const opts = { ...base, ...CANVAS_LIMITS };
   const ok = (sub: T[]) => {

@@ -33,10 +33,10 @@ export function Preview(p: Props) {
 
   // Preview uses stored images; the size label shows what the export will be at the chosen quality
   const capOn = s.caption.trim() !== '';
-  const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos]);
-  const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality, s.trim, s.autoTrim, capOn, s.captionPos]);
+  const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap]);
+  const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap]);
   const wa = s.quality === 'whatsapp';
-  const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos]);
+  const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos, s.joinOverlap]);
   useEffect(() => {
     if (L && cv.current) paint(cv.current, L, s, false, p.meta);
   }, [L, s.gapColor, s.caption, s.numbers, s.watermark, p.meta]);
@@ -60,6 +60,7 @@ export function Preview(p: Props) {
           >
             {E.width} × {E.height} px
             {E.reduced && ' · reduced to fit browser limit'}
+            {E.joined.some(Boolean) && ` · ${E.joined.filter(Boolean).length} joined`}
             {wa && ' · fits WhatsApp HD'}
           </span>
         )}

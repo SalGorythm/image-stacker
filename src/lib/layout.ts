@@ -39,6 +39,8 @@ export interface LayoutOptions {
   /** Caption band heights as a fraction of the stack's width (they scale with it). */
   head?: number;
   foot?: number;
+  /** joined[i]: images i and i+1 continue each other, so no gap goes between them. */
+  joined?: boolean[];
 }
 
 // Browsers refuse to export canvases past these limits (Safari is much stricter on area)
@@ -65,8 +67,10 @@ export function layout<T>(list: T[], size: (it: T) => Sized, o: LayoutOptions): 
   const B = o.q ? build(o.q) : base;
   const raw = B.s.map(x => (o.width === 'original' ? x : { w: B.target, h: (x.h * B.target) / x.w }));
   const gap0 = (Math.max(0, o.gap || 0) * B.width) / base.width;
+  let gaps = 0;
+  for (let i = 0; i < raw.length - 1; i++) if (!o.joined?.[i]) gaps++;
   const bands = ((o.head || 0) + (o.foot || 0)) * B.width;
-  const tall = raw.reduce((t, p) => t + p.h, 0) + gap0 * (raw.length - 1) + bands;
+  const tall = raw.reduce((t, p) => t + p.h, 0) + gap0 * gaps + bands;
   const limitFit = Math.min(1, o.maxSide / tall, o.maxSide / B.width, Math.sqrt(o.maxArea / (B.width * tall)));
   let boxFit = 1;
   if (o.box) {
@@ -85,7 +89,7 @@ export function layout<T>(list: T[], size: (it: T) => Sized, o: LayoutOptions): 
     gap,
     headH,
     footH,
-    height: headH + parts.reduce((t, p) => t + p.h, 0) + gap * (parts.length - 1) + footH,
+    height: headH + parts.reduce((t, p) => t + p.h, 0) + gap * gaps + footH,
     reduced: limitFit < 1 && limitFit <= boxFit,
     boxed: boxFit < 1 && boxFit < limitFit,
   };

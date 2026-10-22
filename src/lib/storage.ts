@@ -91,6 +91,7 @@ export function loadSettings(): Settings {
     if (typeof raw.caption === 'string') s.caption = raw.caption;
     if (typeof raw.numbers === 'boolean') s.numbers = raw.numbers;
     if (typeof raw.watermark === 'string') s.watermark = raw.watermark;
+    if (typeof raw.joinOverlap === 'boolean') s.joinOverlap = raw.joinOverlap;
   } catch { /* private mode or bad JSON */ }
   return s;
 }

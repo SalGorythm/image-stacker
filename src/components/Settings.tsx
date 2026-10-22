@@ -38,6 +38,13 @@ export function LayoutSettings({ s, update }: Props) {
           <option value="original">Keep original, centre</option>
         </select>
       </div>
+      <label className="check">
+        <input type="checkbox" checked={s.joinOverlap} onChange={e => update({ joinOverlap: e.target.checked })} />
+        Join overlapping screenshots
+      </label>
+      {s.joinOverlap && (
+        <p className="hint">Consecutive screenshots of a long chat or page are joined where they overlap, and the repeated part is removed.</p>
+      )}
     </div>
   );
 }

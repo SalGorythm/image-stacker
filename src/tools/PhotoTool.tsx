@@ -7,6 +7,7 @@ import { handoff } from '../lib/handoff';
 import { normaliseFiles } from '../lib/heic';
 import { backgroundCheck, coverView, guides, ID_SPECS, placeFace, printSheet, type IdSpec, type View } from '../lib/idphoto';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -175,7 +176,7 @@ export function PhotoTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Passport photo</h1>
+        <h1>{pageH1('Passport photo')}</h1>
         <p>Frame a photo to your country's passport or ID rules, check the background, and download the digital file or a 6 × 4 print sheet. Nothing is uploaded.</p>
       </div>
       <div className="grid">

@@ -3,6 +3,7 @@ import type { ToastOptions, ToastState } from '../hooks';
 import { CARD_SIZES, renderCard, TEMPLATES, type Card, type CardSize, type CardTemplate } from '../lib/cards';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
 import { hasArabicScript, type ScriptFont } from '../lib/script';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   toast: ToastState | null;
@@ -58,7 +59,7 @@ export function CardsTool({ toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Cards</h1>
+        <h1>{pageH1('Cards')}</h1>
         <p>Make a verse, quote or announcement card for WhatsApp Status or Instagram, with proper Arabic and Urdu lettering. Nothing is uploaded.</p>
       </div>
       <div className="grid">

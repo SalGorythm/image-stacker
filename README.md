@@ -30,3 +30,16 @@ npm run build      # type-check and build to dist/ (copies the OCR and ONNX runt
 - pdf.js, jsPDF and JSZip are loaded only when first needed.
 
 Deployed on Vercel (`vercel.json` sets the Vite build and `dist` output).
+
+## Domain, search and ads settings
+
+Each tool has its own address (for example `/resize-image-in-kb`, `/compress-image-to-20kb`). The build writes a separate HTML page for each, with its own title, description, social image and structured data, plus `sitemap.xml`, `robots.txt`, `llms.txt` and, when ads are on, `ads.txt`. Page text lives in `src/seo/pages.ts` and `src/seo/info.ts`.
+
+Set these in Vercel → Settings → Environment Variables, then redeploy:
+
+| Variable | What it does |
+| --- | --- |
+| `SITE_URL` | Your domain, e.g. `https://photosize.app`. Defaults to Vercel's production domain. |
+| `CONTACT_EMAIL` | Shown on the Contact and Privacy pages (AdSense wants a way to reach you). |
+| `ADSENSE_CLIENT` | `ca-pub-…` from AdSense. Adds the AdSense script, `ads.txt` and the ads section of the privacy policy. Ads stay off without it. |
+| `ADSENSE_SLOT` | Optional ad unit id for the one slot between each tool and its guide. |

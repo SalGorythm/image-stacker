@@ -8,6 +8,7 @@ import { handoff } from '../lib/handoff';
 import { normaliseFiles } from '../lib/heic';
 import { PRESETS } from '../lib/presets';
 import { canShareFiles, saveBlob, zipFiles } from '../lib/render';
+import { pageH1 } from '../seo/pages';
 
 interface Source {
   id: number;
@@ -21,6 +22,8 @@ interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
   toast: ToastState | null;
   show: (msg: string, o?: ToastOptions) => void;
+  /** Set by "compress image to N KB" pages: start with that maximum instead of the last rules. */
+  maxKB?: number;
 }
 
 const SPEC_KEY = 'fit-spec';
@@ -43,8 +46,11 @@ const outName = (name: string, r: FitResult) =>
  * Fit to size: makes photos and signatures meet a form's rules (KB range, exact pixels).
  * Files stay in memory only; ID photos and signatures are never saved, not even in this browser.
  */
-export function FitTool({ intakeRef, toast, show }: Props) {
-  const init = useMemo(loadSpec, []);
+export function FitTool({ intakeRef, toast, show, maxKB }: Props) {
+  const init = useMemo(() => {
+    const saved = loadSpec();
+    return maxKB ? { spec: { ...BLANK, pad: saved.spec.pad, maxKB }, preset: '' } : saved;
+  }, [maxKB]);
   const [spec, setSpec] = useState<FitSpec>(init.spec);
   const [preset, setPreset] = useState(init.preset);
   const [files, setFiles] = useState<Source[]>([]);
@@ -144,7 +150,7 @@ export function FitTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Fit to size</h1>
+        <h1>{pageH1('Fit to size')}</h1>
         <p>Make a photo or signature meet a form's rules: a KB range and exact pixels. Nothing is uploaded, and nothing is saved on this device.</p>
       </div>
       <div className="grid">

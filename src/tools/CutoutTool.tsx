@@ -5,6 +5,8 @@ import { cantOpen, loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../
 import { handoff } from '../lib/handoff';
 import { normaliseFiles } from '../lib/heic';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
+import { navigate } from '../hooks';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -103,7 +105,7 @@ export function CutoutTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Remove background</h1>
+        <h1>{pageH1('Remove background')}</h1>
         <p>Cut a person or product out of a photo and put it on white, a colour, or a transparent background. Done on this device: nothing is uploaded, no credits, full size.</p>
       </div>
       <div className="grid">
@@ -152,7 +154,7 @@ export function CutoutTool({ intakeRef, toast, show }: Props) {
               catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) show('Sharing failed. Use Download instead.', { err: true }); }
             }}>Share</button>}
             {ready.length === 1 && back !== 'transparent' && (
-              <button className="btn" onClick={async () => { handoff.files = await files(); location.hash = '#/photo'; }}>Use for passport photo →</button>
+              <button className="btn" onClick={async () => { handoff.files = await files(); navigate('/passport-size-photo'); }}>Use for passport photo →</button>
             )}
           </div>
           <div className={'toast' + (toast?.err ? ' err' : '')} role="status">

@@ -67,8 +67,9 @@ function ToolsMenu({ tools }: { tools: ToolLink[] }) {
   }, [open]);
   useEffect(() => {
     const close = () => setOpen(false);
-    window.addEventListener('hashchange', close);
-    return () => window.removeEventListener('hashchange', close);
+    window.addEventListener('routechange', close);
+    window.addEventListener('popstate', close);
+    return () => { window.removeEventListener('routechange', close); window.removeEventListener('popstate', close); };
   }, []);
   // When the open tool isn't one of the header links, the menu button shows its name
   const current = tools.find(t => t.active && !FEATURED.includes(t.key));
@@ -101,7 +102,7 @@ export function SiteHeader({ tools, sections, showSections, onInstall, installLa
   return (
     <header className="site-head">
       <div className="site-head-in">
-        <a className="brand" href="#/" aria-label="Image Stacker home">
+        <a className="brand" href="/" aria-label="Image Stacker home">
           <Mark />
           <span>Image Stacker</span>
         </a>
@@ -160,7 +161,9 @@ export function SiteFooter({ tools, sections, onInstall, installLabel, onHelp }:
       </div>
       <div className="foot-bottom">
         <div className="foot-bottom-in">
-          <span>© 2026 Image Stacker</span>
+          <span className="foot-legal">
+            © 2026 Image Stacker · <a href="/about">About</a> · <a href="/privacy">Privacy</a> · <a href="/contact">Contact</a>
+          </span>
           <span className="foot-credits">
             Runs on this device with <a href="https://github.com/strukturag/libheif" target="_blank" rel="noreferrer">libheif</a> (LGPL-3.0),{' '}
             <a href="https://github.com/naptha/tesseract.js" target="_blank" rel="noreferrer">Tesseract.js</a> (Apache-2.0),{' '}

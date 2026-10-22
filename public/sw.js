@@ -47,10 +47,11 @@ self.addEventListener('fetch', e => {
       const c = await caches.open(APP);
       try {
         const res = await fetch(e.request);
-        if (res.ok) c.put('/', res.clone());
+        // Each page has its own address and text; any of them starts the same app offline
+        if (res.ok) c.put(url.pathname, res.clone());
         return res;
       } catch {
-        return (await c.match('/')) || Response.error();
+        return (await c.match(url.pathname)) || (await c.match('/')) || Response.error();
       }
     })());
   }

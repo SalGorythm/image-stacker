@@ -7,6 +7,7 @@ import { normaliseFiles } from '../lib/heic';
 import { pagesToPdf } from '../lib/pdfOut';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
 import { enhance, findPage, pageSize, warp, WHOLE, type Quad, type ScanLook } from '../lib/scan';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -174,7 +175,7 @@ export function ScanTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Scan</h1>
+        <h1>{pageH1('Scan')}</h1>
         <p>Turn phone photos of paper into straight, clean pages and save them as one PDF, even under a size limit. No watermark, no account, nothing uploaded.</p>
       </div>
       <div className="grid">

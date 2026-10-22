@@ -21,7 +21,10 @@ import { ScanTool } from './tools/ScanTool';
 import { SignatureTool } from './tools/SignatureTool';
 import { Preview } from './components/Preview';
 import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
-import { useEvent, useInstall, useRoute, useToast } from './hooks';
+import { navigate, useEvent, useInstall, usePage, useToast } from './hooks';
+import { AdSlot, InfoView, ToolGuide, useSeo } from './seo/PageParts';
+import type { InfoPage } from './seo/info';
+import { pathOf } from './seo/pages';
 import { drag } from './lib/drag';
 import {
   fileName, filesFromPaste, loadImg, makeSample, NO_IMAGE, PASTE_KEY, readClipboardImages, baseName, takeSharedFiles, makeThumb, setBlockedHandler, blockedMessage, cantOpen,
@@ -264,7 +267,9 @@ export default function App() {
   });
 
   // Which tool is open; dropped and pasted files go to that tool
-  const route = useRoute();
+  const page = usePage();
+  const route = page.route;
+  useSeo(page);
   const intake = useRef<((files: File[]) => void) | null>(null);
   // Images another tool sends to the stacker (e.g. quiz cards) arrive when it opens
   useEffect(() => {
@@ -308,7 +313,8 @@ export default function App() {
   const fileInput = useRef<HTMLInputElement>(null);
   // The guide opens by itself on a first visit (not when files were shared into the app)
   const [help, setHelp] = useState(() => {
-    try { return !localStorage.getItem('stacker-guide-seen') && !location.search.includes('shared'); } catch { return false; }
+    try { const direct = !document.referrer || new URL(document.referrer).origin === location.origin;
+    return route === 'stack' && direct && !localStorage.getItem('stacker-guide-seen') && !location.search.includes('shared'); } catch { return false; }
   });
   const closeHelp = () => {
     setHelp(false);
@@ -318,10 +324,10 @@ export default function App() {
   const { showInstall, canPrompt, installed, platform, install } = useInstall();
   const [installHelp, setInstallHelp] = useState(false);
   // Section links work from any tool: they open the stacker first
-  const toStacker = (then: () => void) => { location.hash = '#/'; setTimeout(then, 80); };
+  const toStacker = (then: () => void) => { navigate('/'); setTimeout(then, 80); };
   const goTo = (id: string) => {
     const el = document.getElementById(id);
-    if (!el) { if (location.hash.length > 2) toStacker(() => goTo(id)); return; }
+    if (!el) { if (route !== 'stack') toStacker(() => goTo(id)); return; }
     el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     el.classList.remove('spot');
     void el.offsetWidth; // restart the highlight animation
@@ -362,7 +368,7 @@ export default function App() {
     { key: 'export', label: canShareFiles ? 'Share' : 'Download', hint: 'Share, download or copy your stacks', run: () => goTo('export') },
   ];
   const T = (key: string, label: string, hint: string, group: ToolLink['group']): ToolLink =>
-    ({ key, label, hint, group, href: key === 'stack' ? '#/' : `#/${key}`, active: route === key });
+    ({ key, label, hint, group, href: pathOf(key as Exclude<typeof route, 'info'>), active: route === key });
   const tools: ToolLink[] = [
     T('stack', 'Stacker', 'Stack images and PDF slides into tall images, grids or carousels', 'Share'),
     T('cards', 'Cards', 'Verse, quote and announcement cards, Urdu and Arabic ready', 'Share'),
@@ -403,7 +409,8 @@ export default function App() {
         }}
       />
     )}
-    {route === 'fit' ? <FitTool intakeRef={intake} toast={toast} show={show} />
+    {route === 'info' ? <InfoView page={page as InfoPage} />
+      : route === 'fit' ? <FitTool key={page.path} maxKB={page.maxKB} intakeRef={intake} toast={toast} show={show} />
       : route === 'signature' ? <SignatureTool intakeRef={intake} toast={toast} show={show} />
       : route === 'safe' ? <SafeTool intakeRef={intake} toast={toast} show={show} />
       : route === 'convert' ? <ConvertTool intakeRef={intake} toast={toast} show={show} />
@@ -417,7 +424,10 @@ export default function App() {
       : route === 'video' ? <VideoTool intakeRef={intake} toast={toast} show={show} />
       : route === 'quiz' ? <QuizTool toast={toast} show={show} /> : (
     <main className="wrap">
-      <p className="intro">Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
+      <div className="tool-head">
+        <h1>{page.h1}</h1>
+        <p>Stack images or PDF slides into tall images, split them into groups, and share them. Images stay in your browser.</p>
+      </div>
 
       <div className="grid">
         <section className="panel" aria-label="Images and settings">
@@ -445,7 +455,7 @@ export default function App() {
               {items.some(it => it.located) && (
                 <div className="sample">
                   {(n => (n === 1 ? '1 photo here has its' : `${n} photos here have their`))(items.filter(it => it.located).length)} location saved. Your stacked images never include it.{' '}
-                  <a href="#/safe">Clean the originals</a>
+                  <a href={pathOf('safe')}>Clean the originals</a>
                 </div>
               )}
               {isSample && <div className="sample">These two are examples. They disappear when you add your own images.</div>}
@@ -502,6 +512,8 @@ export default function App() {
       </div>
     </main>
     )}
+    {route !== 'info' && <AdSlot key={`ad:${page.path}`} id={page.path} />}
+    <ToolGuide page={page} />
     <SiteFooter tools={tools} sections={nav} showSections={route === 'stack'} onInstall={onInstall} installLabel={installed && !canPrompt ? 'Installed' : 'Install app'} onHelp={() => setHelp(true)} />
     </>
   );

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { PAGES, pageFor, pathOf, type Page } from './seo/pages';
 
 /** Stable function identity that always calls the latest closure (for global listeners). */
 export function useEvent<A extends unknown[], R>(fn: (...a: A) => R) {
@@ -73,17 +74,45 @@ export function useToast() {
   return { toast, show, hide };
 }
 
-export type Route = 'stack' | 'fit' | 'signature' | 'safe' | 'convert' | 'cards' | 'scan' | 'photo' | 'qr' | 'text' | 'watermark' | 'cutout' | 'video' | 'quiz';
-const ROUTES: Route[] = ['fit', 'signature', 'safe', 'convert', 'cards', 'scan', 'photo', 'qr', 'text', 'watermark', 'cutout', 'video', 'quiz'];
-const routeOf = (hash: string): Route => ROUTES.find(r => hash.startsWith('#/' + r)) ?? 'stack';
+export type Route = 'stack' | 'fit' | 'signature' | 'safe' | 'convert' | 'cards' | 'scan' | 'photo' | 'qr' | 'text' | 'watermark' | 'cutout' | 'video' | 'quiz' | 'info';
+const LEGACY: Exclude<Route, 'info'>[] = ['fit', 'signature', 'safe', 'convert', 'cards', 'scan', 'photo', 'qr', 'text', 'watermark', 'cutout', 'video', 'quiz'];
 
-/** Which tool is open, from the URL hash (#/ for the stacker, #/fit, …), so links and Back work. */
-export function useRoute() {
-  const [route, setRoute] = useState<Route>(() => routeOf(location.hash));
+/** Opens a page of the site without reloading (links inside the app call this too). */
+export function navigate(path: string) {
+  if (path === location.pathname) return;
+  history.pushState(null, '', path);
+  window.dispatchEvent(new Event('routechange'));
+}
+
+/**
+ * Which page is open, from the address (/, /resize-image-in-kb, /about, …), so links, Back and
+ * search results all work. Old #/fit style links from before are moved to their new address.
+ */
+export function usePage() {
+  const read = () => pageFor(location.pathname) ?? PAGES[0];
+  const [page, setPage] = useState<Page>(() => {
+    const old = LEGACY.find(r => location.hash.startsWith('#/' + r));
+    if (old || location.hash === '#/') history.replaceState(null, '', (old ? pathOf(old) : '/') + location.search);
+    return read();
+  });
   useEffect(() => {
-    const on = () => { setRoute(routeOf(location.hash)); window.scrollTo(0, 0); };
-    window.addEventListener('hashchange', on);
-    return () => window.removeEventListener('hashchange', on);
+    const on = () => { setPage(read()); window.scrollTo(0, 0); };
+    // Plain links to our own pages open in place instead of reloading the app
+    const click = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element).closest?.('a');
+      if (!a || a.target || a.hasAttribute('download') || a.origin !== location.origin || !pageFor(a.pathname)) return;
+      e.preventDefault();
+      navigate(a.pathname);
+    };
+    window.addEventListener('popstate', on);
+    window.addEventListener('routechange', on);
+    document.addEventListener('click', click);
+    return () => {
+      window.removeEventListener('popstate', on);
+      window.removeEventListener('routechange', on);
+      document.removeEventListener('click', click);
+    };
   }, []);
-  return route;
+  return page;
 }

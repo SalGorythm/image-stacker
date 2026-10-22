@@ -1,7 +1,7 @@
 {
   "name": "Image Stacker",
   "short_name": "Stacker",
-  "description": "Stack images or PDF slides into one tall image, split into groups, and share.",
+  "description": "Free image tools that run on your device: combine images, resize in KB for forms, scan to PDF, passport photos, signatures, Urdu and Arabic cards, and more.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

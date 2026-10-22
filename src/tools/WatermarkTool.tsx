@@ -6,6 +6,7 @@ import { normaliseFiles } from '../lib/heic';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
 import { ensureFont, textStyle } from '../lib/script';
 import { markBoxes, type MarkPos } from '../lib/watermark';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -171,7 +172,7 @@ export function WatermarkTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Watermark</h1>
+        <h1>{pageH1('Watermark')}</h1>
         <p>Put your logo or name on many photos at once, in the same place on every one. Photos keep their full size. Nothing is uploaded.</p>
       </div>
       <div className="grid">

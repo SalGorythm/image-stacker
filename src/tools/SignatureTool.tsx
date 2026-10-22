@@ -6,6 +6,8 @@ import { handoff } from '../lib/handoff';
 import { normaliseFiles } from '../lib/heic';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
 import { inkMask, renderSignature, type InkColour, type InkMask } from '../lib/signature';
+import { navigate } from '../hooks';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -99,7 +101,7 @@ export function SignatureTool({ intakeRef, toast, show }: Props) {
   };
   const toFit = async () => {
     handoff.files = [await file('jpg')];
-    location.hash = '#/fit';
+    navigate('/resize-image-in-kb');
   };
   const share = async () => {
     try { await navigator.share({ files: [await file('png')] }); }
@@ -116,7 +118,7 @@ export function SignatureTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Signature</h1>
+        <h1>{pageH1('Signature')}</h1>
         <p>Turn a phone photo of a signature into clean ink on white or a transparent background, cropped neatly. Then fit it to a form's size in one tap. Nothing is uploaded.</p>
       </div>
       <div className="grid">

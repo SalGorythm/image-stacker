@@ -3,6 +3,7 @@ import type { ToastOptions, ToastState } from '../hooks';
 import { needsCountryCode, vcardPayload, waNumber, whatsappLink, wifiPayload } from '../lib/qr';
 import { POSTER_LOOKS, POSTER_SIZES, renderPoster, renderQrOnly, type PosterLook, type PosterSize } from '../lib/qrposter';
 import { canShareFiles, canvasBlob, saveBlob } from '../lib/render';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   toast: ToastState | null;
@@ -88,7 +89,7 @@ export function QrTool({ toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>QR codes</h1>
+        <h1>{pageH1('QR codes')}</h1>
         <p>Make a QR code for a WhatsApp chat, your WiFi, a contact or a link, as a poster or Status image. It's a static code: it works forever, with no account, no subscription and no tracking.</p>
       </div>
       <div className="grid">

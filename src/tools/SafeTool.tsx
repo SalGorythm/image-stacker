@@ -6,6 +6,7 @@ import { kb } from '../lib/fitImage';
 import { heicToJpeg, isHeic, isImageFile } from '../lib/heic';
 import { loadImg, NO_IMAGE, PASTE_KEY, readableOnly, readClipboardImages, cantOpen } from '../lib/files';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -110,7 +111,7 @@ export function SafeTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Safe to share</h1>
+        <h1>{pageH1('Safe to share')}</h1>
         <p>See what your photos give away, like where they were taken and on which phone, and get clean copies with that removed. The picture itself is not changed. Nothing is uploaded.</p>
       </div>
       <div className="grid">

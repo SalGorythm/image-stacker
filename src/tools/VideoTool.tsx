@@ -5,6 +5,7 @@ import { normaliseFiles } from '../lib/heic';
 import { slideAt, slideshowLength, wipeAt } from '../lib/motion';
 import { canShareFiles, saveBlob } from '../lib/render';
 import { drawPhoto, makeVideo } from '../lib/video';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -132,7 +133,7 @@ export function VideoTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Video</h1>
+        <h1>{pageH1('Video')}</h1>
         <p>Turn photos into a short video for WhatsApp chats or Status: a before/after reveal or a slideshow. Made on this device, saved as MP4.</p>
       </div>
       <div className="grid">

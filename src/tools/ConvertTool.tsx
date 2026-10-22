@@ -5,6 +5,7 @@ import { kb } from '../lib/fitImage';
 import { loadImg, NO_IMAGE, PASTE_KEY, readableOnly, readClipboardImages, cantOpen } from '../lib/files';
 import { heicToJpeg, isHeic, isImageFile } from '../lib/heic';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -91,7 +92,7 @@ export function ConvertTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Convert</h1>
+        <h1>{pageH1('Convert')}</h1>
         <p>Open iPhone HEIC photos, WebP or AVIF images that won't open or upload, and save them as JPG or PNG. Nothing is uploaded.</p>
       </div>
       <div className="grid">

@@ -5,6 +5,8 @@ import { handoff } from '../lib/handoff';
 import { parseQuiz, quizCards, type QuizOrder } from '../lib/quiz';
 import { renderQuizCard } from '../lib/quizRender';
 import { canShareFiles, canvasBlob, saveBlob, zipFiles } from '../lib/render';
+import { navigate } from '../hooks';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   toast: ToastState | null;
@@ -58,7 +60,7 @@ export function QuizTool({ toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Quiz cards</h1>
+        <h1>{pageH1('Quiz cards')}</h1>
         <p>Type or paste your questions and answers once and get a numbered set of cards to post in your group, with the answers last. Urdu and Arabic work too.</p>
       </div>
       <div className="grid">
@@ -111,7 +113,7 @@ export function QuizTool({ toast, show }: Props) {
             {canShareFiles && <button className="btn" disabled={!cards.length || busy} onClick={() => run(async fs => {
               try { await navigator.share({ files: fs }); } catch (e) { if (!(e instanceof DOMException && e.name === 'AbortError')) show('Sharing failed. Use Download instead.', { err: true }); }
             })}>Share all</button>}
-            <button className="btn" disabled={!cards.length || busy} onClick={() => run(async fs => { handoff.files = fs; location.hash = '#/'; })}>Send to Stacker</button>
+            <button className="btn" disabled={!cards.length || busy} onClick={() => run(async fs => { handoff.files = fs; navigate('/'); })}>Send to Stacker</button>
           </div>
           <div className={'toast' + (toast?.err ? ' err' : '')} role="status">
             {toast?.msg}

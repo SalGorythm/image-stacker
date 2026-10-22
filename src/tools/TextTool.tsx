@@ -5,6 +5,7 @@ import { cantOpen, loadImg, NO_IMAGE, PASTE_KEY, readClipboardImages } from '../
 import { normaliseFiles } from '../lib/heic';
 import type { OcrLang } from '../lib/ocr';
 import { saveBlob } from '../lib/render';
+import { pageH1 } from '../seo/pages';
 
 interface Props {
   intakeRef: RefObject<((files: File[]) => void) | null>;
@@ -85,7 +86,7 @@ export function TextTool({ intakeRef, toast, show }: Props) {
   return (
     <main className="wrap">
       <div className="tool-head">
-        <h1>Copy text</h1>
+        <h1>{pageH1('Copy text')}</h1>
         <p>Get the text out of photos and screenshots, in English, Urdu, Arabic or Hindi, so you can copy, edit or forward it. Read on this device; nothing is uploaded.</p>
       </div>
       <div className="grid">

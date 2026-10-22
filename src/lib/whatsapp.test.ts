@@ -26,26 +26,26 @@ describe('WhatsApp box', () => {
 
 describe('whatsappAdvice', () => {
   it('says 4 slides are readable', () => {
-    const a = whatsappAdvice(Array(4).fill(slide), id, 18, 'widest', 2692)!;
+    const a = whatsappAdvice(Array(4).fill(slide), id, { gap: 18, width: 'widest', q: 2692 })!;
     expect(a.readable).toBe(true);
   });
 
   it('flags 10 slides and suggests the largest readable stack', () => {
-    const a = whatsappAdvice(Array(10).fill(slide), id, 18, 'widest', 2692)!;
+    const a = whatsappAdvice(Array(10).fill(slide), id, { gap: 18, width: 'widest', q: 2692 })!;
     expect(a.readable).toBe(false);
     expect(a.width).toBeLessThan(1080);
     expect(a.maxPerStack).toBe(6);
-    expect(whatsappAdvice(Array(6).fill(slide), id, 18, 'widest', 2692)!.readable).toBe(true);
-    expect(whatsappAdvice(Array(7).fill(slide), id, 18, 'widest', 2692)!.readable).toBe(false);
+    expect(whatsappAdvice(Array(6).fill(slide), id, { gap: 18, width: 'widest', q: 2692 })!.readable).toBe(true);
+    expect(whatsappAdvice(Array(7).fill(slide), id, { gap: 18, width: 'widest', q: 2692 })!.readable).toBe(false);
   });
 
   it('judges small images against their own width', () => {
-    const a = whatsappAdvice([{ w: 600, h: 400, vector: false }], id, 0, 'widest', 2692)!;
+    const a = whatsappAdvice([{ w: 600, h: 400, vector: false }], id, { gap: 0, width: 'widest', q: 2692 })!;
     expect(a.readable).toBe(true);
   });
 
   it('suggests one screenshot per image when two are already too tall', () => {
-    const a = whatsappAdvice([shot, shot], id, 0, 'widest', 2692)!;
+    const a = whatsappAdvice([shot, shot], id, { gap: 0, width: 'widest', q: 2692 })!;
     expect(a.readable).toBe(false);
     expect(a.maxPerStack).toBe(1);
   });

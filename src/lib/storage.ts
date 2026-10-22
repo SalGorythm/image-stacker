@@ -67,6 +67,7 @@ const OPTIONS: Partial<Record<keyof Settings, readonly string[]>> = {
   quality: ['hd', '4k', 'std', 'whatsapp'],
   gmode: ['all', 'every', 'ranges'],
   gtail: ['rest', 'repeat'],
+  captionPos: ['top', 'bottom'],
 };
 
 /** Reads saved settings, including the older single-file version's format (gsize as "4,3,5"). */
@@ -86,6 +87,9 @@ export function loadSettings(): Settings {
     if (raw.trim && typeof raw.trim === 'object')
       for (const k of ['t', 'b', 'l', 'r'] as const) s.trim[k] = Math.min(45, Math.max(0, Number(raw.trim[k]) || 0));
     if (typeof raw.autoTrim === 'boolean') s.autoTrim = raw.autoTrim;
+    if (typeof raw.caption === 'string') s.caption = raw.caption;
+    if (typeof raw.numbers === 'boolean') s.numbers = raw.numbers;
+    if (typeof raw.watermark === 'string') s.watermark = raw.watermark;
   } catch { /* private mode or bad JSON */ }
   return s;
 }

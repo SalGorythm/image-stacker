@@ -1,5 +1,5 @@
-import { CANVAS_LIMITS, layout, type Sized } from './layout';
-import { WHATSAPP_BOX, type WidthMode } from './types';
+import { CANVAS_LIMITS, layout, type LayoutOptions, type Sized } from './layout';
+import { WHATSAPP_BOX } from './types';
 
 /** Narrower than this and slide text gets hard to read on a phone. */
 export const MIN_READABLE = 1080;
@@ -17,8 +17,12 @@ export interface Advice {
  * It counts as readable when it keeps at least MIN_READABLE px of width, or its full
  * width when the images are smaller than that to begin with.
  */
-export function whatsappAdvice<T>(list: T[], size: (it: T) => Sized, gap: number, width: WidthMode, q: number): Advice | null {
-  const opts = { gap, width, q, ...CANVAS_LIMITS };
+export function whatsappAdvice<T>(
+  list: T[],
+  size: (it: T) => Sized,
+  base: Pick<LayoutOptions, 'gap' | 'width' | 'q' | 'head' | 'foot'>,
+): Advice | null {
+  const opts = { ...base, ...CANVAS_LIMITS };
   const ok = (sub: T[]) => {
     const fitted = layout(sub, size, { ...opts, box: WHATSAPP_BOX })!;
     const free = layout(sub, size, opts)!;

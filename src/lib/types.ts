@@ -38,6 +38,12 @@ export interface Settings {
   trim: { t: number; b: number; l: number; r: number };
   /** Also remove plain margins detected on each image. */
   autoTrim: boolean;
+  /** Caption text with placeholders like {range}; empty means no caption. */
+  caption: string;
+  captionPos: 'top' | 'bottom';
+  /** Badge each image with its position in the list. */
+  numbers: boolean;
+  watermark: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -53,6 +59,10 @@ export const DEFAULT_SETTINGS: Settings = {
   fname: 'stacked',
   trim: { t: 0, b: 0, l: 0, r: 0 },
   autoTrim: false,
+  caption: '',
+  captionPos: 'top',
+  numbers: false,
+  watermark: '',
 };
 
 /** Target width for PDF pages at each quality (0 = as stored). */

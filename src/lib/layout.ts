@@ -22,6 +22,9 @@ export interface Layout<T> {
   reduced: boolean;
   /** True when shrunk to fit the requested box. */
   boxed: boolean;
+  /** Caption bands above and below the images, in px (0 when there is none). */
+  headH: number;
+  footH: number;
 }
 
 export interface LayoutOptions {
@@ -33,6 +36,9 @@ export interface LayoutOptions {
   maxArea: number;
   /** Fit the finished stack inside this box (long and short side), e.g. WhatsApp's HD limit. */
   box?: { long: number; short: number };
+  /** Caption band heights as a fraction of the stack's width (they scale with it). */
+  head?: number;
+  foot?: number;
 }
 
 // Browsers refuse to export canvases past these limits (Safari is much stricter on area)
@@ -59,7 +65,8 @@ export function layout<T>(list: T[], size: (it: T) => Sized, o: LayoutOptions): 
   const B = o.q ? build(o.q) : base;
   const raw = B.s.map(x => (o.width === 'original' ? x : { w: B.target, h: (x.h * B.target) / x.w }));
   const gap0 = (Math.max(0, o.gap || 0) * B.width) / base.width;
-  const tall = raw.reduce((t, p) => t + p.h, 0) + gap0 * (raw.length - 1);
+  const bands = ((o.head || 0) + (o.foot || 0)) * B.width;
+  const tall = raw.reduce((t, p) => t + p.h, 0) + gap0 * (raw.length - 1) + bands;
   const limitFit = Math.min(1, o.maxSide / tall, o.maxSide / B.width, Math.sqrt(o.maxArea / (B.width * tall)));
   let boxFit = 1;
   if (o.box) {
@@ -71,11 +78,14 @@ export function layout<T>(list: T[], size: (it: T) => Sized, o: LayoutOptions): 
   const r = boxFit < limitFit ? Math.floor : Math.round;
   const parts = list.map((it, i) => ({ it, w: r(raw[i].w * fit), h: r(raw[i].h * fit) }));
   const gap = r(gap0 * fit);
+  const headH = r((o.head || 0) * B.width * fit), footH = r((o.foot || 0) * B.width * fit);
   return {
     parts,
     width: r(B.width * fit),
     gap,
-    height: parts.reduce((t, p) => t + p.h, 0) + gap * (parts.length - 1),
+    headH,
+    footH,
+    height: headH + parts.reduce((t, p) => t + p.h, 0) + gap * (parts.length - 1) + footH,
     reduced: limitFit < 1 && limitFit <= boxFit,
     boxed: boxFit < 1 && boxFit < limitFit,
   };

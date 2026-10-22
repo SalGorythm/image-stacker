@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { paint, stackAdvice, stackLayout } from '../lib/render';
+import type { StackMeta } from '../lib/captions';
 import type { Format, Item, Quality, Settings } from '../lib/types';
 import type { ToastState } from '../hooks';
 
@@ -7,6 +8,8 @@ interface Props {
   s: Settings;
   update: (patch: Partial<Settings>) => void;
   list: Item[];
+  /** Which stack this is, for caption placeholders and image numbers. */
+  meta?: StackMeta;
   cur: number;
   count: number;
   label: string;
@@ -29,13 +32,14 @@ export function Preview(p: Props) {
   const multi = count > 1;
 
   // Preview uses stored images; the size label shows what the export will be at the chosen quality
-  const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width, s.trim, s.autoTrim]);
-  const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality, s.trim, s.autoTrim]);
+  const capOn = s.caption.trim() !== '';
+  const L = useMemo(() => stackLayout(list, s, false), [list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos]);
+  const E = useMemo(() => stackLayout(list, s, true), [list, s.gap, s.width, s.quality, s.trim, s.autoTrim, capOn, s.captionPos]);
   const wa = s.quality === 'whatsapp';
-  const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width, s.trim, s.autoTrim]);
+  const advice = useMemo(() => (wa ? stackAdvice(list, s) : null), [wa, list, s.gap, s.width, s.trim, s.autoTrim, capOn, s.captionPos]);
   useEffect(() => {
-    if (L && cv.current) paint(cv.current, L, s, false);
-  }, [L, s.gapColor]);
+    if (L && cv.current) paint(cv.current, L, s, false, p.meta);
+  }, [L, s.gapColor, s.caption, s.numbers, s.watermark, p.meta]);
 
   return (
     <section className="panel preview" id="export" aria-label="Preview">

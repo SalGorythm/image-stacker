@@ -5,7 +5,7 @@ import { Help } from './components/Help';
 import { PagePicker } from './components/PagePicker';
 import { SiteFooter, SiteHeader, type NavItem } from './components/Site';
 import { Preview } from './components/Preview';
-import { GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
+import { CaptionSettings, GroupSettings, LayoutSettings, TrimSettings } from './components/Settings';
 import { useEvent, useInstall, useToast } from './hooks';
 import { drag } from './lib/drag';
 import {
@@ -13,7 +13,7 @@ import {
 } from './lib/files';
 import { computeGroups } from './lib/groups';
 import { dropPdf, isDeck, isPdf, openPdf, pdfPages, type PdfInfo } from './lib/pdf';
-import { buildPdf, buildZip, canShareFiles, copyStack, imageBlob, saveBlob, shareFiles, TOO_BIG } from './lib/render';
+import { buildPdf, buildZip, canShareFiles, copyStack, imageBlob, saveBlob, shareFiles, TOO_BIG, type Stack } from './lib/render';
 import { loadItems, loadSettings, saveItems, saveSettings } from './lib/storage';
 import type { Item, PdfSrc, Settings } from './lib/types';
 
@@ -82,6 +82,12 @@ export default function App() {
     return m;
   }, [groups, multi]);
   const current = useMemo(() => new Set(multi ? list.map(it => it.id) : []), [list, multi]);
+  // Each stack knows its range and number (for captions) and every image's position (for numbers)
+  const stacks = useMemo<Stack[]>(() => {
+    const positions = new Map(items.map((it, i) => [it.id, i + 1]));
+    return groups.map((g, i) => ({ list: g.list, label: g.label, index: i, total: groups.length, positions }));
+  }, [items, groups]);
+  const stack = stacks[c];
 
   // PDFs with more than one page open the page picker; it resolves with the chosen pages or null
   const [picking, setPicking] = useState<{ info: PdfInfo; done: (pages: number[] | null) => void } | null>(null);
@@ -181,16 +187,16 @@ export default function App() {
   const save = () => run(async () => {
     const name = fileName(s.fname, s.fmt, c, labels);
     show('Preparing…', { keep: true });
-    saveBlob(s.fmt === 'pdf' ? await buildPdf([list], s) : await imageBlob(list, s), name);
+    saveBlob(s.fmt === 'pdf' ? await buildPdf([stack], s) : await imageBlob(stack, s), name);
     show('Saved ' + name);
   });
   const saveAll = () => run(async () => {
     const n = groups.length, base = baseName(s.fname);
     if (s.fmt === 'pdf') {
-      saveBlob(await buildPdf(groups.map(g => g.list), s, i => show(`Building page ${i + 1} of ${n}…`, { keep: true })), base + '.pdf');
+      saveBlob(await buildPdf(stacks, s, i => show(`Building page ${i + 1} of ${n}…`, { keep: true })), base + '.pdf');
       return show(`Saved ${base}.pdf with ${n} pages.`);
     }
-    const files = groups.map((g, i) => ({ name: fileName(s.fname, s.fmt, i, labels), list: g.list }));
+    const files = stacks.map((st, i) => ({ name: fileName(s.fname, s.fmt, i, labels), stack: st }));
     saveBlob(await buildZip(files, s, i => show(`Building image ${i + 1} of ${n}…`, { keep: true })), base + '.zip');
     show(`Saved ${base}.zip with ${n} images.`);
   });
@@ -201,7 +207,7 @@ export default function App() {
     const n = idx.length;
     show('Preparing…', { keep: true });
     const files = await shareFiles(
-      idx.map(i => groups[i].list),
+      idx.map(i => stacks[i]),
       idx.map(i => fileName(s.fname, s.fmt === 'pdf' ? 'png' : s.fmt, i, labels)),
       all ? `${baseName(s.fname)}.pdf` : fileName(s.fname, 'pdf', c, labels),
       s,
@@ -223,7 +229,7 @@ export default function App() {
   });
   const copy = () => run(async () => {
     try {
-      await copyStack(list, s);
+      await copyStack(stack, s);
       show('Copied. Paste it into WhatsApp or anywhere else.');
     } catch (e) {
       show(e instanceof Error && e.message === TOO_BIG ? TOO_BIG : 'This browser blocked copying images. Use Download instead.', { err: true });
@@ -286,6 +292,7 @@ export default function App() {
     },
     { key: 'groups', label: 'Groups', hint: 'Split into several stacks', run: () => goTo('groups') },
     { key: 'trim', label: 'Trim', hint: 'Cut the edges of every image', run: () => goTo('trim') },
+    { key: 'captions', label: 'Captions', hint: 'Caption, image numbers and watermark', run: () => goTo('captions') },
     {
       key: 'whatsapp', label: 'WhatsApp', hint: 'Keep stacks sharp after sending on WhatsApp',
       run: () => { update({ quality: 'whatsapp' }); goTo('export'); show('WhatsApp quality is on. Each stack now fits WhatsApp HD.'); },
@@ -342,6 +349,7 @@ export default function App() {
 
           <LayoutSettings s={s} update={update} />
           <TrimSettings s={s} update={update} />
+          <CaptionSettings s={s} update={update} />
           <GroupSettings
             s={s}
             update={update}
@@ -357,6 +365,7 @@ export default function App() {
           s={s}
           update={update}
           list={list}
+          meta={stack}
           cur={c}
           count={groups.length}
           label={groups[c]?.label ?? ''}

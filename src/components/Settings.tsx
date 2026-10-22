@@ -193,3 +193,50 @@ export function TrimSettings({ s, update }: Props) {
     </div>
   );
 }
+
+export function CaptionSettings({ s, update }: Props) {
+  return (
+    <div className="section" id="captions">
+      <span className="label">Captions</span>
+      <div className="settings">
+        <label htmlFor="caption">Caption</label>
+        <div className="inline">
+          <input
+            type="text"
+            id="caption"
+            placeholder="e.g. Answers {range}"
+            value={s.caption}
+            maxLength={120}
+            onChange={e => update({ caption: e.target.value })}
+          />
+          <select
+            aria-label="Caption position"
+            value={s.captionPos}
+            style={{ width: 'auto' }}
+            onChange={e => update({ captionPos: e.target.value as Settings['captionPos'] })}
+          >
+            <option value="top">Above</option>
+            <option value="bottom">Below</option>
+          </select>
+        </div>
+        <label htmlFor="watermark">Watermark</label>
+        <input
+          type="text"
+          id="watermark"
+          placeholder="Optional, bottom-right corner"
+          value={s.watermark}
+          maxLength={60}
+          onChange={e => update({ watermark: e.target.value })}
+        />
+      </div>
+      <label className="check">
+        <input type="checkbox" checked={s.numbers} onChange={e => update({ numbers: e.target.checked })} />
+        Number each image by its place in the list
+      </label>
+      <p className="hint">
+        In the caption, <code>{'{range}'}</code> becomes the stack's images (e.g. 18-27), <code>{'{first}'}</code> and{' '}
+        <code>{'{last}'}</code> its first and last, <code>{'{n}'}</code> the stack number and <code>{'{total}'}</code> the number of stacks.
+      </p>
+    </div>
+  );
+}

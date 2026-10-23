@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SITE } from '../seo/site';
 
 export interface NavItem {
   key: string;
@@ -146,6 +147,7 @@ export function SiteFooter({ tools, sections, onInstall, installLabel, onHelp }:
           <div className="row">
             {onInstall && <button className="btn sm primary" onClick={onInstall}>{installLabel}</button>}
             <button className="btn sm" onClick={onHelp}>How it works</button>
+            {SITE.supportUrl && <a className="btn sm" href={SITE.supportUrl} target="_blank" rel="noopener">☕ Support</a>}
           </div>
         </div>
         {GROUPS.map(g => (

@@ -10,6 +10,8 @@ export interface SiteConfig {
   /** AdSense ad unit for the slot under each tool; empty to rely on Auto ads only. */
   adsSlot: string;
   contactEmail: string;
+  /** A Buy Me a Coffee (or similar) page; the support links appear only when set. */
+  supportUrl: string;
 }
 
 export interface Section { h: string; p: string[]; links?: { label: string; url: string }[] }
@@ -42,6 +44,9 @@ export function infoPages(c: SiteConfig): InfoPage[] {
           'Everything uses the browser\'s own image tools (canvas), with open-source engines for the harder jobs: libheif to open iPhone photos, Tesseract.js to read text and U²-Net with ONNX Runtime to remove backgrounds. They load only when a tool needs them and are kept on your device for offline use.',
           'You can install it as an app on your phone or computer, and it keeps working without internet.',
         ] },
+        ...(c.supportUrl ? [{ h: 'Support', p: [
+          `${c.name} is free and stays free. If it saved you time, you can support its upkeep and new tools with a small contribution.`,
+        ], links: [{ label: 'Support PhotoSize', url: c.supportUrl }] }] : []),
       ],
     },
     {

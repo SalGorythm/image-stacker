@@ -43,6 +43,6 @@ Set these in Vercel → Settings → Environment Variables, then redeploy:
 | --- | --- |
 | `SITE_URL` | Only to override the address. Vercel builds use `https://photosize.app`. |
 | `CONTACT_EMAIL` | Shown on the Contact and Privacy pages (AdSense wants a way to reach you). |
-| `ADSENSE_CLIENT` | `ca-pub-…` from AdSense. Adds the AdSense script, `ads.txt` and the ads section of the privacy policy. Ads stay off without it. |
+| `ADSENSE_CLIENT` | Vercel builds use PhotoSize's publisher id (`ca-pub-5640433281391130`). Set it to an empty value to turn ads off. Adds the AdSense script, `ads.txt` and the ads section of the privacy policy. |
 | `SUPPORT_URL` | Your Buy Me a Coffee (or similar) page. Adds a Support button in the footer and a Support section on About. |
 | `ADSENSE_SLOT` | Optional ad unit id for the one slot between each tool and its guide. |

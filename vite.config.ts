@@ -9,16 +9,19 @@ import { allPages, headTags, llmsTxt, robots, sitemap, staticBody } from './src/
 /**
  * Site settings come from environment variables (Vercel → Settings → Environment Variables, or .env):
  *   SITE_URL        overrides the address (defaults to https://photosize.app on Vercel)
- *   ADSENSE_CLIENT  ca-pub-… once AdSense gives you one; ads stay off without it
+ *   ADSENSE_CLIENT  overrides the AdSense publisher id (Vercel builds use PhotoSize's; set it empty to turn ads off)
  *   ADSENSE_SLOT    an ad unit id for the slot under each tool (optional)
  *   CONTACT_EMAIL   shown on the contact and privacy pages
  *   SUPPORT_URL     your Buy Me a Coffee (or similar) page; adds Support links
  */
+/** PhotoSize's AdSense publisher id (public: it appears in every page and in ads.txt). */
+const ADSENSE = 'ca-pub-5640433281391130';
+
 function siteConfig(mode: string): SiteConfig {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
   // Every Vercel build (previews too) points search engines at the real domain
   const url = (env.SITE_URL || (env.VERCEL ? 'https://photosize.app' : 'http://localhost:4173')).replace(/\/+$/, '');
-  return { url, name: 'PhotoSize', adsClient: env.ADSENSE_CLIENT || '', adsSlot: env.ADSENSE_SLOT || '', contactEmail: env.CONTACT_EMAIL || '', supportUrl: env.SUPPORT_URL || '' };
+  return { url, name: 'PhotoSize', adsClient: env.ADSENSE_CLIENT ?? (env.VERCEL ? ADSENSE : ''), adsSlot: env.ADSENSE_SLOT || '', contactEmail: env.CONTACT_EMAIL || '', supportUrl: env.SUPPORT_URL || '' };
 }
 
 /** Writes one HTML file per page plus sitemap.xml, robots.txt, llms.txt and ads.txt after the build. */

@@ -68,7 +68,7 @@ export function QuizTool({ toast, show }: Props) {
     <main className="wrap">
       <div className="tool-head">
         <h1>{pageH1('Quiz cards')}</h1>
-        <p>Type or paste your questions and answers once and get a numbered set of cards to post in your group, with the answers last. Urdu and Arabic work too.</p>
+        <p>Type or paste your questions and answers once and get a numbered set of cards to post in your group, with the answers last.</p>
       </div>
       <div className="grid">
         <section className="panel" aria-label="Questions">
@@ -76,7 +76,7 @@ export function QuizTool({ toast, show }: Props) {
             <label className="label" htmlFor="quiz-text">Questions and answers</label>
             <textarea id="quiz-text" dir="auto" rows={10} value={d.text} onChange={e => set({ text: e.target.value })} />
             <p className="hint">
-              Write <code>Q:</code> before each question and <code>A:</code> before its answer (or سوال / جواب), or put each question on its own line with the answer below and a blank line between them.
+              Write <code>Q:</code> before each question and <code>A:</code> before its answer, or put each question on its own line with the answer below and a blank line between them.
               {' '}{qs.length ? `${qs.length} question${qs.length > 1 ? 's' : ''} found.` : 'No questions found yet.'}
             </p>
           </div>

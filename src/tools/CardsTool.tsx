@@ -67,7 +67,7 @@ export function CardsTool({ toast, show }: Props) {
     <main className="wrap">
       <div className="tool-head">
         <h1>{pageH1('Cards')}</h1>
-        <p>Make a quote, poem or announcement card for WhatsApp Status or Instagram, with proper Arabic and Urdu lettering. Nothing is uploaded.</p>
+        <p>Make a quote, poem or announcement card for WhatsApp Status or Instagram. Nothing is uploaded.</p>
       </div>
       <div className="grid">
         <section className="panel" aria-label="Card text and style">

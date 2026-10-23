@@ -112,7 +112,7 @@ export function robots(c: SiteConfig) {
 export function llmsTxt(c: SiteConfig, full = false) {
   const item = (p: Page) => `- [${p.h1}](${c.url}${p.path}): ${p.summary}`;
   const detail = (p: Page) => `## ${p.h1}\n\nURL: ${c.url}${p.path}\n\n${p.summary}\n\nHow to use it:\n${p.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n${p.faqs.map(f => `Q: ${f.q}\nA: ${f.a}`).join('\n\n')}\n`;
-  const intro = `# ${c.name}\n\n> Free image tools that run entirely in the browser: nothing is uploaded, no sign-up, no watermark, no limits, and they work offline once installed. Made for sharing on WhatsApp and Instagram and for uploading photos, signatures and documents to online forms. English, Urdu, Arabic and Hindi text are supported where text is involved.\n\n`;
+  const intro = `# ${c.name}\n\n> Free image tools that run entirely in the browser: nothing is uploaded, no sign-up, no watermark, no limits, and they work offline once installed. Made for sharing on WhatsApp and Instagram and for uploading photos, signatures and documents to online forms.\n\n`;
   if (full) return intro + TOOL_PAGES.map(detail).join('\n') + '\n' + KB_PAGES.slice(0, 1).map(detail).join('');
   return intro +
     `## Tools\n\n${TOOL_PAGES.map(item).join('\n')}\n\n` +

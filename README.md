@@ -6,7 +6,7 @@ The Stacker (home page): Stack images or PDF pages into tall images, grids or si
 
 Tools (all in the browser, nothing uploaded):
 
-- **Stacker**: stack images or PDF slides into tall images, grids or side-by-side strips; groups, trim, captions (Urdu/Arabic), numbering, watermark, blur with automatic detection of phone numbers and emails, screenshot joining, WhatsApp-safe sizing, Instagram carousel slicing, HD re-rendering of PDF pages.
+- **Stacker**: stack images or PDF slides into tall images, grids or side-by-side strips; groups, trim, captions, numbering, watermark, blur with automatic detection of phone numbers and emails, screenshot joining, WhatsApp-safe sizing, Instagram carousel slicing, HD re-rendering of PDF pages.
 - **Fit to size**: exact KB window and pixel size for exam, bank and visa portals, with sourced presets.
 - **Scan**: phone photos of paper to clean, straightened pages and an A4 PDF under a size limit.
 - **Passport photo**: guided framing to country specs, background check, digital file and 6×4 print sheet.

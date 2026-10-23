@@ -136,10 +136,10 @@ export const TOOL_PAGES: Page[] = [
   },
   {
     path: '/image-to-text', route: 'text', og: 'text', priority: 0.7,
-    title: 'Image to Text – Urdu, Arabic, Hindi & English OCR, Free',
-    description: 'Copy text from a photo or screenshot in English, Urdu, Arabic or Hindi. Free OCR that runs on your device, so private messages and documents stay private.',
-    h1: 'Image to text (Urdu, Arabic, Hindi, English)',
-    summary: 'Copy text reads the words in a photo or screenshot and gives you text you can copy, edit or forward. It reads English, Urdu, Arabic and Hindi, and works on your own device.',
+    title: 'Image to Text – Copy Text From Photos, Free OCR',
+    description: 'Copy text from a photo or screenshot in seconds. Free OCR that runs on your device, so private messages and documents stay private.',
+    h1: 'Image to text',
+    summary: 'Copy text reads the words in a photo or screenshot and gives you text you can copy, edit or forward. It works on your own device, so nothing is uploaded.',
     steps: [
       'Add or paste a photo or screenshot.',
       'Choose the language of the text.',
@@ -147,7 +147,7 @@ export const TOOL_PAGES: Page[] = [
       'Copy the text, check it and fix anything it misread.',
     ],
     faqs: [
-      { q: 'Can I copy Urdu text from an image?', a: 'Yes. Choose Urdu. Printed Urdu in Naskh-style fonts reads best; Nastaliq calligraphy and handwriting are harder and may need correcting.' },
+      { q: 'What kind of text reads best?', a: 'Clear printed text in a sharp, well-lit photo or a screenshot. Handwriting and decorative fonts are harder and may need correcting.' },
       { q: 'Does it work offline?', a: 'Yes, after a language has been used once it is kept on your device.' },
       PRIVATE, FREE,
     ],
@@ -206,17 +206,17 @@ export const TOOL_PAGES: Page[] = [
   },
   {
     path: '/quote-card-maker', route: 'cards', og: 'cards', priority: 0.7,
-    title: 'Quote Card Maker – Urdu & Arabic Text on Image, Free',
-    description: 'Make quote, poetry and announcement cards with proper Urdu Nastaliq and Arabic fonts for WhatsApp Status and Instagram. Free, no watermark.',
-    h1: 'Quote card maker (Urdu and Arabic ready)',
-    summary: 'Cards turns a quote, a line of poetry, a greeting or an announcement into a clean image for WhatsApp Status or Instagram, with proper Urdu Nastaliq and Arabic Naskh fonts that join letters correctly.',
+    title: 'Quote Card Maker – Text on Image for Status, Free',
+    description: 'Make quote, poetry and announcement cards for WhatsApp Status and Instagram in a few taps. Free, no sign-up, no watermark.',
+    h1: 'Quote card maker',
+    summary: 'Cards turns a quote, a line of poetry, a greeting or an announcement into a clean image for WhatsApp Status or Instagram.',
     steps: [
       'Type or paste your text, and a second line such as a translation or source if you want one.',
       'Pick a style and a size: WhatsApp Status, 4:5 post or square.',
       'Download or share the card.',
     ],
     faqs: [
-      { q: 'Why does Urdu text break apart in other apps?', a: 'Many editors don\'t use a font or text layout that joins Urdu and Arabic letters. Cards uses Noto Nastaliq Urdu and Noto Naskh Arabic and sets the text right to left.' },
+      { q: 'Can I use my group or business name?', a: 'Yes. Put it in the footer and it appears small at the bottom of every card.' },
       { q: 'What sizes can I make?', a: 'WhatsApp Status (1080 × 1920), a 4:5 post (1080 × 1350) and square (1080 × 1080).' },
       FREE,
     ],
@@ -224,7 +224,7 @@ export const TOOL_PAGES: Page[] = [
   {
     path: '/quiz-cards', route: 'quiz', og: 'quiz', priority: 0.6,
     title: 'Quiz Cards Maker – Questions as Images for WhatsApp',
-    description: 'Paste questions and answers once and get numbered quiz cards to post in a WhatsApp group, with the answers at the end. Urdu and Arabic supported.',
+    description: 'Paste questions and answers once and get numbered quiz cards to post in a WhatsApp group, with the answers at the end. Free, no watermark.',
     h1: 'Quiz cards for WhatsApp groups',
     summary: 'Quiz cards turns a list of questions and answers into numbered images to post one by one in a class or study group, with the answers together at the end, after each question or on the same card.',
     steps: [
@@ -234,7 +234,7 @@ export const TOOL_PAGES: Page[] = [
     ],
     faqs: [
       { q: 'How do I write the questions?', a: 'Put Q: before each question and A: before its answer, or put each question on its own line with the answer below and a blank line between them.' },
-      { q: 'Can I write in Urdu?', a: 'Yes. Urdu and Arabic are set right to left in proper fonts.' },
+      { q: 'Can I put the answer on the same card?', a: 'Yes. Choose whether answers come all together at the end, after each question or on the same card.' },
       FREE,
     ],
   },
@@ -258,7 +258,7 @@ export const TOOL_PAGES: Page[] = [
   {
     path: '/add-watermark-to-photos', route: 'watermark', og: 'watermark', priority: 0.6,
     title: 'Add Watermark to Photos in Bulk – Logo or Text, Free',
-    description: 'Put your logo or name on many photos at once, in a corner, the centre or tiled. Photos keep full size. Urdu and Arabic text supported. Nothing uploaded.',
+    description: 'Put your logo or name on many photos at once, in a corner, the centre or tiled. Photos keep full size and format. Nothing is uploaded.',
     h1: 'Add a watermark to many photos at once',
     summary: 'Watermark places your logo, your name or both on many photos in one go, in the same spot on each, while keeping the photos at full size and in their original format.',
     steps: [
@@ -268,7 +268,7 @@ export const TOOL_PAGES: Page[] = [
     ],
     faqs: [
       { q: 'Does it reduce photo quality?', a: 'No. Photos keep their size and format; only the watermark is added.' },
-      { q: 'Can the watermark be in Urdu or Arabic?', a: 'Yes. Text in Urdu or Arabic is set right to left with proper fonts.' },
+      { q: 'Is my logo saved for next time?', a: 'Yes, in this browser only, so you don\'t have to add it again.' },
       PRIVATE, FREE,
     ],
   },

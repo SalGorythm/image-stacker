@@ -87,7 +87,7 @@ export function TextTool({ intakeRef, toast, show }: Props) {
     <main className="wrap">
       <div className="tool-head">
         <h1>{pageH1('Copy text')}</h1>
-        <p>Get the text out of photos and screenshots, in English, Urdu, Arabic or Hindi, so you can copy, edit or forward it. Read on this device; nothing is uploaded.</p>
+        <p>Get the text out of photos and screenshots so you can copy, edit or forward it. Read on this device; nothing is uploaded.</p>
       </div>
       <div className="grid">
         <section className="panel" aria-label="Images">
